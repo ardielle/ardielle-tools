@@ -56,6 +56,7 @@ import (
 	"encoding/json"
 	"fmt"
 	rdl "{{rdlruntime}}"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -170,6 +171,29 @@ func (client {{client}}) httpPost(url string, headers map[string]string, body []
 	}
 	req.Close = true // close req to avoid leaking fd's as new client being created now
 	req.Header.Add("Content-type", "application/json")
+	client.addAuthHeader(req)
+    if headers != nil {
+		for k, v := range headers {
+			req.Header.Add(k, v)
+		}
+	}
+	return hclient.Do(req)
+}
+
+func (client {{client}}) httpOptions(url string, headers map[string]string, body []byte) (*http.Response, error) {
+	var contentReader io.Reader = nil
+	if body != nil {
+		contentReader = bytes.NewReader(body)
+	}
+	hclient := client.getClient()
+	req, err := http.NewRequest("OPTIONS", url, contentReader)
+	if err != nil {
+		return nil, err
+	}
+	req.Close = true // close req to avoid leaking fd's as new client being created now
+	if contentReader != nil {
+		req.Header.Add("Content-type", "application/json")
+	}
 	client.addAuthHeader(req)
     if headers != nil {
 		for k, v := range headers {
@@ -460,6 +484,23 @@ func goMethodBody(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) string {
 		s += "\tif err != nil {\n\t\t" + errorReturn + "\n\t}\n"
 		s += "\tresp, err := client.http" + method + "(" + httpArg + ", contentBytes)\n"
 		assign = "="
+	case "Options":
+		bodyParam := "?"
+		for _, in := range r.Inputs {
+			name := in.Name
+			if !in.PathParam && in.QueryParam == "" && in.Header == "" {
+				bodyParam = string(name)
+				break
+			}
+		}
+		if bodyParam != "?" {
+			s += "\tcontentBytes, err := json.Marshal(" + bodyParam + ")\n"
+			s += "\tif err != nil {\n\t\t" + errorReturn + "\n\t}\n"
+			s += "\tresp, err := client.http" + method + "(" + httpArg + ", contentBytes)\n"
+			assign = "="
+		} else {
+			s += "\tresp, err := client.http" + method + "(" + httpArg + ", nil)\n"
+		}
 	}
 	s += "\tif err != nil {\n\t\t" + errorReturn + "\n\t}\n"
 	s += "\tcontentBytes, err " + assign + " ioutil.ReadAll(resp.Body)\n"
