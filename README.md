@@ -1,4 +1,5 @@
-# ardielle-tools
+# ardielle-tools [![Build Status](https://travis-ci.org/ardielle/ardielle-tools.svg?branch=master)](https://travis-ci.org/ardielle/ardielle-tools)
+
 RDL tools
 
 ## Installation
