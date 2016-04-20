@@ -677,13 +677,8 @@ func (gen *javaServerGenerator) handlerBody(r *rdl.Resource) string {
 	if !resultWrapper {
 		returnType = javaType(gen.registry, r.Type, false, "", "")
 	}
-	s := ""
-	if resultWrapper {
-		s += "        ResourceContext context = this.delegate.newResourceContext(this.request, this.response);\n"
-	} else {
-		s += "        try {\n"
-		s += "            ResourceContext context = this.delegate.newResourceContext(this.request, this.response);\n"
-	}
+	s := "        try {\n"
+	s += "            ResourceContext context = this.delegate.newResourceContext(this.request, this.response);\n"
 	var fargs []string
 	bodyName := ""
 	if r.Auth != nil {
@@ -740,12 +735,12 @@ func (gen *javaServerGenerator) handlerBody(r *rdl.Resource) string {
 			pathParamsArgs = "null"
 		}
 		if async {
-			s += "        " + rName + " result = new " + rName + "(context, " + pathParamsArgs + ", " + a + ");\n"
+			s += "            " + rName + " result = new " + rName + "(context, " + pathParamsArgs + ", " + a + ");\n"
 		} else {
-			s += "        " + rName + " result = new " + rName + "(context);\n"
+			s += "            " + rName + " result = new " + rName + "(context);\n"
 		}
 		sargs += ", result"
-		s += "        this.delegate." + methName + "(context" + sargs + ");\n"
+		s += "            this.delegate." + methName + "(context" + sargs + ");\n"
 	} else {
 		s += "            " + returnType + " e = this.delegate." + methName + "(context" + sargs + ");\n"
 		noContent := r.Expected == "NO_CONTENT" && r.Alternatives == nil
@@ -759,28 +754,28 @@ func (gen *javaServerGenerator) handlerBody(r *rdl.Resource) string {
 		} else {
 			s += "            return e;\n"
 		}
-		s += "        } catch (ResourceException e) {\n"
-		s += "            int code = e.getCode();\n"
-		s += "            switch (code) {\n"
-		if len(r.Alternatives) > 0 {
-			for _, alt := range r.Alternatives {
-				s += "            case ResourceException." + alt + ":\n"
-			}
-			s += "                throw typedException(code, e, " + returnType + ".class);\n"
-		}
-		if r.Exceptions != nil && len(r.Exceptions) > 0 {
-			for ecode, edef := range r.Exceptions {
-				etype := edef.Type
-				s += "            case ResourceException." + ecode + ":\n"
-				s += "                throw typedException(code, e, " + etype + ".class);\n"
-			}
-		}
-		s += "            default:\n"
-		s += "                System.err.println(\"*** Warning: undeclared exception (\" + code + \") for resource " + methName + "\");\n"
-		s += "                throw typedException(code, e, ResourceError.class);\n" //? really
-		s += "            }\n"
-		s += "        }\n"
 	}
+	s += "        } catch (ResourceException e) {\n"
+	s += "            int code = e.getCode();\n"
+	s += "            switch (code) {\n"
+	if len(r.Alternatives) > 0 {
+		for _, alt := range r.Alternatives {
+			s += "            case ResourceException." + alt + ":\n"
+		}
+		s += "                throw typedException(code, e, " + returnType + ".class);\n"
+	}
+	if r.Exceptions != nil && len(r.Exceptions) > 0 {
+		for ecode, edef := range r.Exceptions {
+			etype := edef.Type
+			s += "            case ResourceException." + ecode + ":\n"
+			s += "                throw typedException(code, e, " + etype + ".class);\n"
+		}
+	}
+	s += "            default:\n"
+	s += "                System.err.println(\"*** Warning: undeclared exception (\" + code + \") for resource " + methName + "\");\n"
+	s += "                throw typedException(code, e, ResourceError.class);\n" //? really
+	s += "            }\n"
+	s += "        }\n"
 	return s
 }
 
