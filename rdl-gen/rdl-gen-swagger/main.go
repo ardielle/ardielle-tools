@@ -294,7 +294,7 @@ func makeSwaggerTypeDef(reg rdl.TypeRegistry, t *rdl.Type) *SwaggerType {
 		var required []string
 		if len(typedef.Fields) > 0 {
 			for _, f := range typedef.Fields {
-				if f.Optional {
+				if !f.Optional {
 					required = append(required, string(f.Name))
 				}
 				ft := reg.FindType(f.Type)
