@@ -180,6 +180,24 @@ func (client {{client}}) httpPost(url string, headers map[string]string, body []
 	return hclient.Do(req)
 }
 
+func (client {{client}}) httpPatch(url string, headers map[string]string, body []byte) (*http.Response, error) {
+	contentReader := bytes.NewReader(body)
+	hclient := client.getClient()
+	req, err := http.NewRequest("PATCH", url, contentReader)
+	if err != nil {
+		return nil, err
+	}
+	req.Close = true // close req to avoid leaking fd's as new client being created now
+	req.Header.Add("Content-type", "application/json")
+	client.addAuthHeader(req)
+    if headers != nil {
+		for k, v := range headers {
+			req.Header.Add(k, v)
+		}
+	}
+	return hclient.Do(req)
+}
+
 func (client {{client}}) httpOptions(url string, headers map[string]string, body []byte) (*http.Response, error) {
 	var contentReader io.Reader = nil
 	if body != nil {
