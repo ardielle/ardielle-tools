@@ -99,6 +99,7 @@ func Init(impl {{cName}}Handler, baseURL string, authz rdl.Authorizer, authns ..
 //
 type {{cName}}Handler interface {{openBrace}}{{range .Resources}}
 	{{methodSig .}}{{end}}
+	Authenticate(context *rdl.ResourceContext) bool
 }
 
 //
@@ -139,8 +140,11 @@ func (adaptor {{name}}Adaptor) authenticate(context *rdl.ResourceContext) bool {
 				}
 			}
 		}
-		log.Println("*** Authentication failed against all authenticator(s)")
 	}
+	if adaptor.impl.Authenticate(context) {
+		return true
+	}
+	log.Println("*** Authentication failed against all authenticator(s)")
 	return false
 }
 
