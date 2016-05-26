@@ -261,11 +261,9 @@ func (gen *schemaGenerator) emitStructType(typedef *rdl.StructTypeDef) {
 			switch gen.registry.FindBaseType(f.Type) {
 			case rdl.BaseTypeEnum:
 				if gen.prefixEnums {
-					fmt.Println("prefix this:", f)
 					def = fmt.Sprint(f.Default)
 					def = SnakeToCamel(def)
 					def = capitalize(string(f.Type)) + def
-					fmt.Println("->", def)
 				} else {
 					def = fmt.Sprint(f.Default)
 				}
