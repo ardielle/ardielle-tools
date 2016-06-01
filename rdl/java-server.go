@@ -330,6 +330,7 @@ const javaServerHandlerTemplate = `{{header}}
 package {{package}};
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import com.yahoo.rdl.*;
 
 //
 // {{cName}}Handler is the interface that the service implementation must implement
@@ -544,6 +545,7 @@ public class {{cName}}Server {
 
 const javaServerTemplate = `{{header}}
 package {{package}};
+import com.yahoo.rdl.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 import javax.servlet.http.HttpServletRequest;
