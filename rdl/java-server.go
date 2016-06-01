@@ -817,7 +817,6 @@ func (gen *javaServerGenerator) handlerSignature(r *rdl.Resource) string {
 	returnType := javaType(gen.registry, r.Type, false, "", "")
 	reg := gen.registry
 	var params []string
-	bodyType := r.Type
 	if r.Async != nil && *r.Async {
 		params = append(params, "@Suspended AsyncResponse asyncResp")
 		returnType = "void"
@@ -837,8 +836,6 @@ func (gen *javaServerGenerator) handlerSignature(r *rdl.Resource) string {
 			pdecl = fmt.Sprintf("@PathParam(%q) ", k)
 		} else if v.Header != "" {
 			pdecl = fmt.Sprintf("@HeaderParam(%q) ", v.Header)
-		} else {
-			bodyType = v.Type
 		}
 		ptype := javaType(reg, v.Type, true, "", "")
 		params = append(params, pdecl+ptype+" "+javaName(k))
@@ -848,7 +845,8 @@ func (gen *javaServerGenerator) handlerSignature(r *rdl.Resource) string {
 	case "POST", "PUT":
 		spec += "    @Consumes(MediaType.APPLICATION_JSON)\n"
 	}
-	methName := strings.ToLower(string(r.Method)) + string(bodyType)
+
+	methName, _ := javaMethodName(reg, r)
 	return spec + "    public " + returnType + " " + methName + "(" + strings.Join(params, ", ") + ")"
 }
 
@@ -903,7 +901,7 @@ func (gen *javaServerGenerator) serverMethodSignature(r *rdl.Resource) string {
 
 func javaMethodName(reg rdl.TypeRegistry, r *rdl.Resource) (string, []string) {
 	var params []string
-	bodyType := r.Type
+	bodyType := string(safeTypeVarName(r.Type))
 	for _, v := range r.Inputs {
 		if v.Context != "" { //ignore these legacy things
 			log.Println("Warning: v1 style context param ignored:", v.Name, v.Context)
@@ -911,7 +909,7 @@ func javaMethodName(reg rdl.TypeRegistry, r *rdl.Resource) (string, []string) {
 		}
 		k := v.Name
 		if v.QueryParam == "" && !v.PathParam && v.Header == "" {
-			bodyType = v.Type
+			bodyType = string(v.Type)
 		}
 		//rest_core always uses the boxed type
 		optional := true
