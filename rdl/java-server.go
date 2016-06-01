@@ -392,6 +392,7 @@ import javax.ws.rs.container.TimeoutHandler;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.WebApplicationException;
 import java.util.concurrent.TimeUnit;
+import com.yahoo.rdl.*;
 
 public final class {{rName}} implements TimeoutHandler {
     private AsyncResponse async;
