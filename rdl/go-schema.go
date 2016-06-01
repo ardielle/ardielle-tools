@@ -84,6 +84,11 @@ func GenerateGoSchema(banner string, schema *rdl.Schema, outdir string, ns strin
 	return gen.err
 }
 
+func safeTypeVarName(rtype rdl.TypeRef) rdl.TypeName {
+	tokens := strings.Split(string(rtype), ".")
+	return rdl.TypeName(capitalize(strings.Join(tokens, "")))
+}
+
 func (gen *schemaGenerator) emitResource(rez *rdl.Resource) {
 	rTypeName := rez.Type
 	if rez.Method == "PUT" || rez.Method == "POST" {
@@ -94,7 +99,8 @@ func (gen *schemaGenerator) emitResource(rez *rdl.Resource) {
 			}
 		}
 	}
-	rname := fmt.Sprintf("r%s%s", capitalize(strings.ToLower(rez.Method)), rTypeName)
+	rVarName := safeTypeVarName(rTypeName)
+	rname := fmt.Sprintf("r%s%s", capitalize(strings.ToLower(rez.Method)), rVarName)
 	gen.emit(fmt.Sprintf("\t%s := rdl.NewResourceBuilder(%q, %q, %q)\n", rname, rez.Type, rez.Method, rez.Path))
 	if rez.Comment != "" {
 		gen.emit(fmt.Sprintf("\t%s.Comment(%q)\n", rname, rez.Comment))

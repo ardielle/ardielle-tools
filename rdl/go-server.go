@@ -611,14 +611,14 @@ func goServerMethodSignature(reg rdl.TypeRegistry, r *rdl.Resource, precise bool
 
 func goMethodName(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) (string, []string) {
 	var params []string
-	bodyType := r.Type
+	bodyType := string(safeTypeVarName(r.Type))
 	for _, v := range r.Inputs {
 		if v.Context != "" { //legacy field, to be removed
 			continue
 		}
 		k := v.Name
 		if v.QueryParam == "" && !v.PathParam && v.Header == "" {
-			bodyType = v.Type
+			bodyType = string(v.Type)
 		}
 		optional := false
 		if v.Optional {
@@ -626,7 +626,7 @@ func goMethodName(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) (string, 
 		}
 		params = append(params, goName(string(k))+" "+goType(reg, v.Type, optional, "", "", precise, true))
 	}
-	return strings.ToLower(string(r.Method)) + string(bodyType), params
+	return strings.ToLower(string(r.Method)) + bodyType, params
 }
 
 func goName(name string) string {
