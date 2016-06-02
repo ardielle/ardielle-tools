@@ -739,8 +739,8 @@ func (gen *javaServerGenerator) handlerBody(r *rdl.Resource) string {
 		if async {
 			a = "asyncResp"
 		}
-		s, _ := javaMethodName(gen.registry, r)
-		rName := capitalize(s) + "Result"
+		tmp, _ := javaMethodName(gen.registry, r)
+		rName := capitalize(tmp) + "Result"
 		pathParamsArgs := strings.Join(gen.makePathParamsArgs(r), ", ")
 		if pathParamsArgs == "" {
 			pathParamsArgs = "null"
