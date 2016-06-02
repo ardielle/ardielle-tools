@@ -143,17 +143,18 @@ func javaServerMakeAsyncResultModel(banner string, schema *rdl.Schema, reg rdl.T
 	if err != nil {
 		return err
 	}
+	rType := javaType(reg, rdl.TypeRef(r.Type), false, "", "")
 	gen := &javaServerGenerator{reg, schema, cName, out, nil, banner, ns, true, base}
 	funcMap := template.FuncMap{
 		"header":     func() string { return javaGenerationHeader(gen.banner) },
 		"package":    func() string { return javaGenerationPackage(gen.schema, ns) },
 		"openBrace":  func() string { return "{" },
-		"name":       func() string { return uncapitalize(string(r.Type)) },
-		"cName":      func() string { return capitalize(string(r.Type)) },
+		"name":       func() string { return uncapitalize(string(safeTypeVarName(r.Type))) },
+		"cName":      func() string { return string(rType) },
 		"resultArgs": func() string { return gen.resultArgs(r) },
 		"resultSig":  func() string { return gen.resultSignature(r) },
 		"rName": func() string {
-			return capitalize(strings.ToLower(string(r.Method))) + string(r.Type) + "Result"
+			return capitalize(s)
 		},
 		"pathParamsKey":    func() string { return gen.makePathParamsKey(r) },
 		"pathParamsDecls":  func() string { return gen.makePathParamsDecls(r) },
@@ -182,17 +183,18 @@ func javaServerMakeResultModel(banner string, schema *rdl.Schema, reg rdl.TypeRe
 	if err != nil {
 		return err
 	}
+	rType := javaType(reg, rdl.TypeRef(r.Type), false, "", "")
 	gen := &javaServerGenerator{reg, schema, cName, out, nil, banner, ns, false, base}
 	funcMap := template.FuncMap{
 		"header":     func() string { return javaGenerationHeader(gen.banner) },
 		"package":    func() string { return javaGenerationPackage(gen.schema, ns) },
 		"openBrace":  func() string { return "{" },
-		"name":       func() string { return uncapitalize(string(r.Type)) },
-		"cName":      func() string { return capitalize(string(r.Type)) },
+		"name":       func() string { return uncapitalize(string(safeTypeVarName(r.Type))) },
+		"cName":      func() string { return string(rType) },
 		"resultArgs": func() string { return gen.resultArgs(r) },
 		"resultSig":  func() string { return gen.resultSignature(r) },
 		"rName": func() string {
-			return capitalize(strings.ToLower(string(r.Method))) + string(r.Type) + "Result"
+			return capitalize(s)
 		},
 		"pathParamsKey":    func() string { return gen.makePathParamsKey(r) },
 		"pathParamsDecls":  func() string { return gen.makePathParamsDecls(r) },
@@ -210,7 +212,8 @@ func javaServerMakeResultModel(banner string, schema *rdl.Schema, reg rdl.TypeRe
 }
 
 func (gen *javaServerGenerator) resultSignature(r *rdl.Resource) string {
-	s := javaType(gen.registry, r.Type, false, "", "") + " " + uncapitalize(string(r.Type)) + "Object"
+	vName := string(safeTypeVarName(r.Type)) + "Object"
+	s := javaType(gen.registry, r.Type, false, "", "") + " " + vName
 	for _, out := range r.Outputs {
 		s += ", " + javaType(gen.registry, out.Type, false, "", "") + " " + javaName(out.Name)
 	}
@@ -218,12 +221,12 @@ func (gen *javaServerGenerator) resultSignature(r *rdl.Resource) string {
 }
 
 func (gen *javaServerGenerator) resultArgs(r *rdl.Resource) string {
-	s := uncapitalize(string(r.Type)) + "Object"
+	vName := string(safeTypeVarName(r.Type)) + "Object"
 	//void?
 	for _, out := range r.Outputs {
-		s += ", " + javaName(out.Name)
+		vName += ", " + javaName(out.Name)
 	}
-	return s
+	return vName
 
 }
 
@@ -239,6 +242,9 @@ func (gen *javaServerGenerator) makePathParamsKey(r *rdl.Resource) string {
 				}
 			}
 		}
+	}
+	if s == "" {
+		s = "\"" + r.Path + "\"" //If there are no input params, make the path as the key
 	}
 	return s
 }
@@ -342,6 +348,7 @@ public interface {{cName}}Handler {{openBrace}} {{range .Resources}}
 `
 const javaServerResultTemplate = `{{header}}
 package {{package}};
+import com.yahoo.rdl.*;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.WebApplicationException;
 
@@ -603,7 +610,7 @@ func makeJavaTypeRef(reg rdl.TypeRegistry, t *rdl.Type) string {
 		typedef := t.EnumTypeDef
 		return javaType(reg, typedef.Type, false, "", "")
 	case rdl.TypeVariantUnionTypeDef:
-		return "interface{}" //! FIX
+		return "Object" //fix
 	}
 	return "?" //never happens
 }
@@ -732,7 +739,8 @@ func (gen *javaServerGenerator) handlerBody(r *rdl.Resource) string {
 		if async {
 			a = "asyncResp"
 		}
-		rName := capitalize(strings.ToLower(string(r.Method))) + string(r.Type) + "Result"
+		s, _ := javaMethodName(gen.registry, r)
+		rName := capitalize(s) + "Result"
 		pathParamsArgs := strings.Join(gen.makePathParamsArgs(r), ", ")
 		if pathParamsArgs == "" {
 			pathParamsArgs = "null"
@@ -912,7 +920,7 @@ func javaMethodName(reg rdl.TypeRegistry, r *rdl.Resource) (string, []string) {
 		}
 		k := v.Name
 		if v.QueryParam == "" && !v.PathParam && v.Header == "" {
-			bodyType = string(v.Type)
+			bodyType = string(safeTypeVarName(v.Type))
 		}
 		//rest_core always uses the boxed type
 		optional := true
