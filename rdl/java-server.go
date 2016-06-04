@@ -334,9 +334,10 @@ func (gen *javaServerGenerator) makeHeaderAssign(r *rdl.Resource) string {
 
 const javaServerHandlerTemplate = `{{header}}
 package {{package}};
+import com.yahoo.rdl.*;
+import java.util.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import com.yahoo.rdl.*;
 
 //
 // {{cName}}Handler is the interface that the service implementation must implement
@@ -349,6 +350,7 @@ public interface {{cName}}Handler {{openBrace}} {{range .Resources}}
 const javaServerResultTemplate = `{{header}}
 package {{package}};
 import com.yahoo.rdl.*;
+import java.util.*;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.WebApplicationException;
 
@@ -391,15 +393,13 @@ public final class {{rName}} {
 `
 const javaServerAsyncResultTemplate = `{{header}}
 package {{package}};
-import java.util.Collection;
-import java.util.Map;
-import java.util.HashMap;
+import com.yahoo.rdl.*;
+import java.util.*;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.TimeoutHandler;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.WebApplicationException;
 import java.util.concurrent.TimeUnit;
-import com.yahoo.rdl.*;
 
 public final class {{rName}} implements TimeoutHandler {
     private AsyncResponse async;
@@ -554,6 +554,7 @@ public class {{cName}}Server {
 const javaServerTemplate = `{{header}}
 package {{package}};
 import com.yahoo.rdl.*;
+import java.util.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 import javax.servlet.http.HttpServletRequest;
