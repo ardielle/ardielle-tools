@@ -446,12 +446,15 @@ func explodeURL(reg rdl.TypeRegistry, r *rdl.Resource) string {
 }
 
 func goMethodBody(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) string {
-	errorReturn := "return nil, err"
+	rtype := goType(reg, r.Type, false, "", "", precise, true)
+	dataDef := fmt.Sprintf("var data %s", rtype)
+	errorReturn := "return data, err"
 	dataReturn := "return data, nil"
 	noContent := r.Expected == "NO_CONTENT" && r.Alternatives == nil
 	if noContent {
 		errorReturn = "return err"
 		dataReturn = "return nil"
+		dataDef = ""
 	}
 	if r.Outputs != nil {
 		dret := "return data"
@@ -472,6 +475,9 @@ func goMethodBody(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) string {
 		}
 	}
 	s := ""
+	if dataDef != "" {
+		s += "\t" + dataDef + "\n"
+	}
 	httpArg := "url, nil"
 	if len(headers) > 0 {
 		//not optimal: when the headers are empty ("") they are still included
@@ -542,7 +548,6 @@ func goMethodBody(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) string {
 	s += "\tcase " + strings.Join(expected, ", ") + ":\n"
 	if couldBeNoContent || couldBeNotModified {
 		if !noContent {
-			s += "\t\tvar data *" + string(r.Type) + "\n"
 			tmp := ""
 			if couldBeNoContent {
 				tmp = "204 != resp.StatusCode"
@@ -559,7 +564,6 @@ func goMethodBody(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) string {
 			s += "\t\t}\n"
 		}
 	} else {
-		s += "\t\tvar data *" + string(r.Type) + "\n"
 		s += "\t\terr = json.Unmarshal(contentBytes, &data)\n"
 		s += "\t\tif err != nil {\n\t\t\t" + errorReturn + "\n\t\t}\n"
 	}
