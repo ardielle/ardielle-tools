@@ -455,51 +455,6 @@ func goParamInit(reg rdl.TypeRegistry, qname string, pname string, ptype rdl.Typ
 	s := ""
 	gtype := goType(reg, ptype, false, "", "", precise, true)
 	switch gtype {
-	/*
-		case "string":
-			if pdefault == nil {
-				s += "\t" + pname + " := rdl.OptionalStringParam(request, \"" + qname + "\")\n"
-			} else {
-				def := fmt.Sprintf("%v", pdefault)
-				s += "\tvar " + pname + "Optional " + gtype + " = " + def + "\n"
-				s += "\t" + pname + ", _ := rdl.StringParam(request, \"" + qname + "\", " + pname + "Optional)\n"
-			}
-		case "bool":
-			if pdefault == nil {
-				s += "\t" + pname + ", err := rdl.OptionalBoolParam(request, \"" + qname + "\")\n"
-				s += "\tif err != nil {\n"
-				s += "\t\trdl.JSONResponse(writer, 400, err)\n"
-				s += "\t\treturn\n"
-				s += "\t}\n"
-			} else {
-				def := fmt.Sprintf("%v", pdefault)
-				s += "\tvar " + pname + "Optional " + gtype + " = " + def + "\n"
-				s += "\t" + pname + " := rdl.BoolParam(request, \"" + qname + "\", " + pname + "Optional)\n"
-			}
-		case "int32", "int64", "int16", "int8":
-			if pdefault == nil {
-				s += "\t" + pname + ", err := rdl.OptionalInt32Param(request, \"" + qname + "\")\n"
-				s += "\tif err != nil {\n\t\trdl.JSONResponse(writer, 400, err)\n\t\treturn\n\t}\n"
-			} else {
-				def := "0"
-				switch v := pdefault.(type) {
-				case float64:
-					def = fmt.Sprintf("%v", v)
-				default:
-					fmt.Println("fix me:", pdefault)
-					panic("fix me")
-				}
-				if precise {
-					s += "\t" + pname + "_, err := rdl.Int32Param(request, \"" + qname + "\", " + def + ")\n"
-				} else {
-					s += "\t" + pname + ", err := rdl.Int32Param(request, \"" + qname + "\", " + def + ")\n"
-				}
-				s += "\tif err != nil {\n\t\trdl.JSONResponse(writer, 400, err)\n\t\treturn\n\t}\n"
-				if precise {
-					s += "\t" + pname + " := " + gtype + "(" + pname + "_)\n"
-				}
-			}
-	*/
 	default:
 		t := reg.FindType(ptype)
 		bt := reg.BaseType(t)
@@ -554,7 +509,11 @@ func goParamInit(reg rdl.TypeRegistry, qname string, pname string, ptype rdl.Typ
 			} else {
 				def := fmt.Sprintf("%v", pdefault)
 				s += "\tvar " + pname + "Optional " + gtype + " = " + def + "\n"
-				s += "\t" + pname + " := rdl.BoolParam(request, \"" + qname + "\", " + pname + "Optional)\n"
+				s += "\t" + pname + ", err := rdl.BoolParam(request, \"" + qname + "\", " + pname + "Optional)\n"
+				s += "\tif err != nil {\n"
+				s += "\t\trdl.JSONResponse(writer, 400, err)\n"
+				s += "\t\treturn\n"
+				s += "\t}\n"
 			}
 		case rdl.BaseTypeEnum:
 			if pdefault == nil {
