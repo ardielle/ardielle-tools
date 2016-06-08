@@ -305,7 +305,7 @@ func goHandlerBody(reg rdl.TypeRegistry, name string, r *rdl.Resource, precise b
 			if in.Optional || in.Default != nil {
 				s += goParamInit(reg, qname, name, in.Type, in.Default, in.Optional, precise, prefixEnums)
 			} else {
-				log.Println("RDL error: queryparam must either be optional or have a default value")
+				log.Printf("RDL error: queryparam '%s' must either be optional or have a default value\n", in.Name)
 			}
 			fargs = append(fargs, name)
 		} else if in.PathParam {
