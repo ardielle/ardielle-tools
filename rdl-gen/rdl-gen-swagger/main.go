@@ -184,6 +184,11 @@ func swagger(schema *rdl.Schema) (*SwaggerDoc, error) {
 					param.Type = ptype
 					param.Format = pformat
 					param.Schema = ref
+
+					if strings.Contains(in.QueryParam, "[]") {
+						param.CollectionFormat = "multi"
+					}
+
 					ins = append(ins, param)
 				}
 				action.Parameters = ins
@@ -438,14 +443,15 @@ type SwaggerAction struct {
 
 // SwaggerParameter -
 type SwaggerParameter struct {
-	Name        string       `json:"name"`
-	In          string       `json:"in"`
-	Schema      *SwaggerType `json:"schema,omitempty"`
-	Type        string       `json:"type,omitempty"`
-	Format      string       `json:"format,omitempty"`
-	Items       *SwaggerType `json:"items,omitempty"`
-	Description string       `json:"description,omitempty"`
-	Required    bool         `json:"required"`
+	Name             string       `json:"name"`
+	In               string       `json:"in"`
+	Schema           *SwaggerType `json:"schema,omitempty"`
+	Type             string       `json:"type,omitempty"`
+	Format           string       `json:"format,omitempty"`
+	Items            *SwaggerType `json:"items,omitempty"`
+	Description      string       `json:"description,omitempty"`
+	Required         bool         `json:"required"`
+	CollectionFormat string       `json:"collectionFormat,omitempty"`
 }
 
 // SwaggerResponse -
