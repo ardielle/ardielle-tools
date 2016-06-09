@@ -72,14 +72,14 @@ var _ = ioutil.NopCloser
 
 type {{client}} struct {
 	URL         string
-	Transport   *http.Transport
+	Transport   http.RoundTripper
 	CredsHeader *string
 	CredsToken  *string
 	Timeout     time.Duration
 }
 
 // NewClient creates and returns a new HTTP client object for the {{.Name}} service
-func NewClient(url string, transport *http.Transport) {{client}} {
+func NewClient(url string, transport http.RoundTripper) {{client}} {
 	return {{client}}{url, transport, nil, nil, 0}
 }
 
