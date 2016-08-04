@@ -13,19 +13,20 @@ import (
 )
 
 type schemaGenerator struct {
-	registry  rdl.TypeRegistry
-	schema    *rdl.Schema
-	name      string
-	writer    *bufio.Writer
-	err       error
-	banner    string
-	ns        string
-	librdl    string
-	rdlprefix string
+	registry    rdl.TypeRegistry
+	schema      *rdl.Schema
+	name        string
+	writer      *bufio.Writer
+	err         error
+	banner      string
+	ns          string
+	librdl      string
+	rdlprefix   string
+	prefixEnums bool
 }
 
 // GenerateGoSchema generates the code to regenerate the Schema
-func GenerateGoSchema(banner string, schema *rdl.Schema, outdir string, ns string, librdl string) error {
+func GenerateGoSchema(banner string, schema *rdl.Schema, outdir string, ns string, librdl string, prefixEnums bool) error {
 	name := strings.ToLower(string(schema.Name))
 	if strings.HasSuffix(outdir, ".go") {
 		name = filepath.Base(outdir)
@@ -44,7 +45,7 @@ func GenerateGoSchema(banner string, schema *rdl.Schema, outdir string, ns strin
 	if schema.Name == "rdl" {
 		rdlprefix = ""
 	}
-	gen := &schemaGenerator{rdl.NewTypeRegistry(schema), schema, capitalize(string(schema.Name)), out, nil, banner, ns, librdl, rdlprefix}
+	gen := &schemaGenerator{rdl.NewTypeRegistry(schema), schema, capitalize(string(schema.Name)), out, nil, banner, ns, librdl, rdlprefix, prefixEnums}
 	gen.emit(generationHeader(banner))
 	gen.emit("\n\npackage " + generationPackage(gen.schema, gen.ns) + "\n\n")
 	if gen.schema.Name != "rdl" {
@@ -83,6 +84,11 @@ func GenerateGoSchema(banner string, schema *rdl.Schema, outdir string, ns strin
 	return gen.err
 }
 
+func safeTypeVarName(rtype rdl.TypeRef) rdl.TypeName {
+	tokens := strings.Split(string(rtype), ".")
+	return rdl.TypeName(capitalize(strings.Join(tokens, "")))
+}
+
 func (gen *schemaGenerator) emitResource(rez *rdl.Resource) {
 	rTypeName := rez.Type
 	if rez.Method == "PUT" || rez.Method == "POST" {
@@ -93,7 +99,8 @@ func (gen *schemaGenerator) emitResource(rez *rdl.Resource) {
 			}
 		}
 	}
-	rname := fmt.Sprintf("r%s%s", capitalize(strings.ToLower(rez.Method)), rTypeName)
+	rVarName := safeTypeVarName(rTypeName)
+	rname := fmt.Sprintf("r%s%s", capitalize(strings.ToLower(rez.Method)), rVarName)
 	gen.emit(fmt.Sprintf("\t%s := rdl.NewResourceBuilder(%q, %q, %q)\n", rname, rez.Type, rez.Method, rez.Path))
 	if rez.Comment != "" {
 		gen.emit(fmt.Sprintf("\t%s.Comment(%q)\n", rname, rez.Comment))
@@ -257,11 +264,22 @@ func (gen *schemaGenerator) emitStructType(typedef *rdl.StructTypeDef) {
 		}
 		def := "nil"
 		if f.Default != nil {
-			switch f.Default.(type) {
-			case string:
-				def = fmt.Sprintf("%q", f.Default)
+			switch gen.registry.FindBaseType(f.Type) {
+			case rdl.BaseTypeEnum:
+				if gen.prefixEnums {
+					def = fmt.Sprint(f.Default)
+					def = SnakeToCamel(def)
+					def = capitalize(string(f.Type)) + def
+				} else {
+					def = fmt.Sprint(f.Default)
+				}
 			default:
-				def = fmt.Sprint(f.Default)
+				switch f.Default.(type) {
+				case string:
+					def = fmt.Sprintf("%q", f.Default)
+				default:
+					def = fmt.Sprint(f.Default)
+				}
 			}
 		}
 		gen.emit(fmt.Sprintf("\t%s.Field(%q, %q, %v, %v, %q)\n", varname, f.Name, f.Type, f.Optional, def, f.Comment))

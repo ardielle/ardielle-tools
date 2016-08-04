@@ -56,7 +56,7 @@ func GenerateGoModel(banner string, schema *rdl.Schema, outdir string, ns string
 	}
 	out.Flush()
 	if gen.err == nil {
-		gen.err = GenerateGoSchema(banner, schema, outdir, ns, librdl)
+		gen.err = GenerateGoSchema(banner, schema, outdir, ns, librdl, prefixEnums)
 	}
 	return gen.err
 }

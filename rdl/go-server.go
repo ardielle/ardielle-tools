@@ -99,6 +99,7 @@ func Init(impl {{cName}}Handler, baseURL string, authz rdl.Authorizer, authns ..
 //
 type {{cName}}Handler interface {{openBrace}}{{range .Resources}}
 	{{methodSig .}}{{end}}
+	Authenticate(context *rdl.ResourceContext) bool
 }
 
 //
@@ -139,8 +140,11 @@ func (adaptor {{name}}Adaptor) authenticate(context *rdl.ResourceContext) bool {
 				}
 			}
 		}
-		log.Println("*** Authentication failed against all authenticator(s)")
 	}
+	if adaptor.impl.Authenticate(context) {
+		return true
+	}
+	log.Println("*** Authentication failed against all authenticator(s)")
 	return false
 }
 
@@ -301,7 +305,7 @@ func goHandlerBody(reg rdl.TypeRegistry, name string, r *rdl.Resource, precise b
 			if in.Optional || in.Default != nil {
 				s += goParamInit(reg, qname, name, in.Type, in.Default, in.Optional, precise, prefixEnums)
 			} else {
-				log.Println("RDL error: queryparam must either be optional or have a default value")
+				log.Printf("RDL error: queryparam '%s' must either be optional or have a default value\n", in.Name)
 			}
 			fargs = append(fargs, name)
 		} else if in.PathParam {
@@ -451,51 +455,6 @@ func goParamInit(reg rdl.TypeRegistry, qname string, pname string, ptype rdl.Typ
 	s := ""
 	gtype := goType(reg, ptype, false, "", "", precise, true)
 	switch gtype {
-	/*
-		case "string":
-			if pdefault == nil {
-				s += "\t" + pname + " := rdl.OptionalStringParam(request, \"" + qname + "\")\n"
-			} else {
-				def := fmt.Sprintf("%v", pdefault)
-				s += "\tvar " + pname + "Optional " + gtype + " = " + def + "\n"
-				s += "\t" + pname + ", _ := rdl.StringParam(request, \"" + qname + "\", " + pname + "Optional)\n"
-			}
-		case "bool":
-			if pdefault == nil {
-				s += "\t" + pname + ", err := rdl.OptionalBoolParam(request, \"" + qname + "\")\n"
-				s += "\tif err != nil {\n"
-				s += "\t\trdl.JSONResponse(writer, 400, err)\n"
-				s += "\t\treturn\n"
-				s += "\t}\n"
-			} else {
-				def := fmt.Sprintf("%v", pdefault)
-				s += "\tvar " + pname + "Optional " + gtype + " = " + def + "\n"
-				s += "\t" + pname + " := rdl.BoolParam(request, \"" + qname + "\", " + pname + "Optional)\n"
-			}
-		case "int32", "int64", "int16", "int8":
-			if pdefault == nil {
-				s += "\t" + pname + ", err := rdl.OptionalInt32Param(request, \"" + qname + "\")\n"
-				s += "\tif err != nil {\n\t\trdl.JSONResponse(writer, 400, err)\n\t\treturn\n\t}\n"
-			} else {
-				def := "0"
-				switch v := pdefault.(type) {
-				case float64:
-					def = fmt.Sprintf("%v", v)
-				default:
-					fmt.Println("fix me:", pdefault)
-					panic("fix me")
-				}
-				if precise {
-					s += "\t" + pname + "_, err := rdl.Int32Param(request, \"" + qname + "\", " + def + ")\n"
-				} else {
-					s += "\t" + pname + ", err := rdl.Int32Param(request, \"" + qname + "\", " + def + ")\n"
-				}
-				s += "\tif err != nil {\n\t\trdl.JSONResponse(writer, 400, err)\n\t\treturn\n\t}\n"
-				if precise {
-					s += "\t" + pname + " := " + gtype + "(" + pname + "_)\n"
-				}
-			}
-	*/
 	default:
 		t := reg.FindType(ptype)
 		bt := reg.BaseType(t)
@@ -550,7 +509,11 @@ func goParamInit(reg rdl.TypeRegistry, qname string, pname string, ptype rdl.Typ
 			} else {
 				def := fmt.Sprintf("%v", pdefault)
 				s += "\tvar " + pname + "Optional " + gtype + " = " + def + "\n"
-				s += "\t" + pname + " := rdl.BoolParam(request, \"" + qname + "\", " + pname + "Optional)\n"
+				s += "\t" + pname + ", err := rdl.BoolParam(request, \"" + qname + "\", " + pname + "Optional)\n"
+				s += "\tif err != nil {\n"
+				s += "\t\trdl.JSONResponse(writer, 400, err)\n"
+				s += "\t\treturn\n"
+				s += "\t}\n"
 			}
 		case rdl.BaseTypeEnum:
 			if pdefault == nil {
@@ -607,14 +570,14 @@ func goServerMethodSignature(reg rdl.TypeRegistry, r *rdl.Resource, precise bool
 
 func goMethodName(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) (string, []string) {
 	var params []string
-	bodyType := r.Type
+	bodyType := string(safeTypeVarName(r.Type))
 	for _, v := range r.Inputs {
 		if v.Context != "" { //legacy field, to be removed
 			continue
 		}
 		k := v.Name
 		if v.QueryParam == "" && !v.PathParam && v.Header == "" {
-			bodyType = v.Type
+			bodyType = string(v.Type)
 		}
 		optional := false
 		if v.Optional {
@@ -622,7 +585,7 @@ func goMethodName(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) (string, 
 		}
 		params = append(params, goName(string(k))+" "+goType(reg, v.Type, optional, "", "", precise, true))
 	}
-	return strings.ToLower(string(r.Method)) + string(bodyType), params
+	return strings.ToLower(string(r.Method)) + bodyType, params
 }
 
 func goName(name string) string {

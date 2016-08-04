@@ -184,6 +184,11 @@ func swagger(schema *rdl.Schema) (*SwaggerDoc, error) {
 					param.Type = ptype
 					param.Format = pformat
 					param.Schema = ref
+
+					if strings.Contains(in.QueryParam, "[]") {
+						param.CollectionFormat = "multi"
+					}
+
 					ins = append(ins, param)
 				}
 				action.Parameters = ins
@@ -294,7 +299,7 @@ func makeSwaggerTypeDef(reg rdl.TypeRegistry, t *rdl.Type) *SwaggerType {
 		var required []string
 		if len(typedef.Fields) > 0 {
 			for _, f := range typedef.Fields {
-				if f.Optional {
+				if !f.Optional {
 					required = append(required, string(f.Name))
 				}
 				ft := reg.FindType(f.Type)
@@ -438,14 +443,15 @@ type SwaggerAction struct {
 
 // SwaggerParameter -
 type SwaggerParameter struct {
-	Name        string       `json:"name"`
-	In          string       `json:"in"`
-	Schema      *SwaggerType `json:"schema,omitempty"`
-	Type        string       `json:"type,omitempty"`
-	Format      string       `json:"format,omitempty"`
-	Items       *SwaggerType `json:"items,omitempty"`
-	Description string       `json:"description,omitempty"`
-	Required    bool         `json:"required"`
+	Name             string       `json:"name"`
+	In               string       `json:"in"`
+	Schema           *SwaggerType `json:"schema,omitempty"`
+	Type             string       `json:"type,omitempty"`
+	Format           string       `json:"format,omitempty"`
+	Items            *SwaggerType `json:"items,omitempty"`
+	Description      string       `json:"description,omitempty"`
+	Required         bool         `json:"required"`
+	CollectionFormat string       `json:"collectionFormat,omitempty"`
 }
 
 // SwaggerResponse -

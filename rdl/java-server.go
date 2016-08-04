@@ -143,17 +143,18 @@ func javaServerMakeAsyncResultModel(banner string, schema *rdl.Schema, reg rdl.T
 	if err != nil {
 		return err
 	}
+	rType := javaType(reg, rdl.TypeRef(r.Type), false, "", "")
 	gen := &javaServerGenerator{reg, schema, cName, out, nil, banner, ns, true, base}
 	funcMap := template.FuncMap{
 		"header":     func() string { return javaGenerationHeader(gen.banner) },
 		"package":    func() string { return javaGenerationPackage(gen.schema, ns) },
 		"openBrace":  func() string { return "{" },
-		"name":       func() string { return uncapitalize(string(r.Type)) },
-		"cName":      func() string { return capitalize(string(r.Type)) },
+		"name":       func() string { return uncapitalize(string(safeTypeVarName(r.Type))) },
+		"cName":      func() string { return string(rType) },
 		"resultArgs": func() string { return gen.resultArgs(r) },
 		"resultSig":  func() string { return gen.resultSignature(r) },
 		"rName": func() string {
-			return capitalize(strings.ToLower(string(r.Method))) + string(r.Type) + "Result"
+			return capitalize(s)
 		},
 		"pathParamsKey":    func() string { return gen.makePathParamsKey(r) },
 		"pathParamsDecls":  func() string { return gen.makePathParamsDecls(r) },
@@ -182,17 +183,18 @@ func javaServerMakeResultModel(banner string, schema *rdl.Schema, reg rdl.TypeRe
 	if err != nil {
 		return err
 	}
+	rType := javaType(reg, rdl.TypeRef(r.Type), false, "", "")
 	gen := &javaServerGenerator{reg, schema, cName, out, nil, banner, ns, false, base}
 	funcMap := template.FuncMap{
 		"header":     func() string { return javaGenerationHeader(gen.banner) },
 		"package":    func() string { return javaGenerationPackage(gen.schema, ns) },
 		"openBrace":  func() string { return "{" },
-		"name":       func() string { return uncapitalize(string(r.Type)) },
-		"cName":      func() string { return capitalize(string(r.Type)) },
+		"name":       func() string { return uncapitalize(string(safeTypeVarName(r.Type))) },
+		"cName":      func() string { return string(rType) },
 		"resultArgs": func() string { return gen.resultArgs(r) },
 		"resultSig":  func() string { return gen.resultSignature(r) },
 		"rName": func() string {
-			return capitalize(strings.ToLower(string(r.Method))) + string(r.Type) + "Result"
+			return capitalize(s)
 		},
 		"pathParamsKey":    func() string { return gen.makePathParamsKey(r) },
 		"pathParamsDecls":  func() string { return gen.makePathParamsDecls(r) },
@@ -210,7 +212,8 @@ func javaServerMakeResultModel(banner string, schema *rdl.Schema, reg rdl.TypeRe
 }
 
 func (gen *javaServerGenerator) resultSignature(r *rdl.Resource) string {
-	s := javaType(gen.registry, r.Type, false, "", "") + " " + uncapitalize(string(r.Type)) + "Object"
+	vName := string(safeTypeVarName(r.Type)) + "Object"
+	s := javaType(gen.registry, r.Type, false, "", "") + " " + vName
 	for _, out := range r.Outputs {
 		s += ", " + javaType(gen.registry, out.Type, false, "", "") + " " + javaName(out.Name)
 	}
@@ -218,12 +221,12 @@ func (gen *javaServerGenerator) resultSignature(r *rdl.Resource) string {
 }
 
 func (gen *javaServerGenerator) resultArgs(r *rdl.Resource) string {
-	s := uncapitalize(string(r.Type)) + "Object"
+	vName := string(safeTypeVarName(r.Type)) + "Object"
 	//void?
 	for _, out := range r.Outputs {
-		s += ", " + javaName(out.Name)
+		vName += ", " + javaName(out.Name)
 	}
-	return s
+	return vName
 
 }
 
@@ -239,6 +242,9 @@ func (gen *javaServerGenerator) makePathParamsKey(r *rdl.Resource) string {
 				}
 			}
 		}
+	}
+	if s == "" {
+		s = "\"" + r.Path + "\"" //If there are no input params, make the path as the key
 	}
 	return s
 }
@@ -328,6 +334,8 @@ func (gen *javaServerGenerator) makeHeaderAssign(r *rdl.Resource) string {
 
 const javaServerHandlerTemplate = `{{header}}
 package {{package}};
+import com.yahoo.rdl.*;
+import java.util.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -341,6 +349,8 @@ public interface {{cName}}Handler {{openBrace}} {{range .Resources}}
 `
 const javaServerResultTemplate = `{{header}}
 package {{package}};
+import com.yahoo.rdl.*;
+import java.util.*;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.WebApplicationException;
 
@@ -383,9 +393,8 @@ public final class {{rName}} {
 `
 const javaServerAsyncResultTemplate = `{{header}}
 package {{package}};
-import java.util.Collection;
-import java.util.Map;
-import java.util.HashMap;
+import com.yahoo.rdl.*;
+import java.util.*;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.TimeoutHandler;
 import javax.ws.rs.core.Response;
@@ -544,6 +553,8 @@ public class {{cName}}Server {
 
 const javaServerTemplate = `{{header}}
 package {{package}};
+import com.yahoo.rdl.*;
+import java.util.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 import javax.servlet.http.HttpServletRequest;
@@ -600,7 +611,7 @@ func makeJavaTypeRef(reg rdl.TypeRegistry, t *rdl.Type) string {
 		typedef := t.EnumTypeDef
 		return javaType(reg, typedef.Type, false, "", "")
 	case rdl.TypeVariantUnionTypeDef:
-		return "interface{}" //! FIX
+		return "Object" //fix
 	}
 	return "?" //never happens
 }
@@ -677,13 +688,8 @@ func (gen *javaServerGenerator) handlerBody(r *rdl.Resource) string {
 	if !resultWrapper {
 		returnType = javaType(gen.registry, r.Type, false, "", "")
 	}
-	s := ""
-	if resultWrapper {
-		s += "        ResourceContext context = this.delegate.newResourceContext(this.request, this.response);\n"
-	} else {
-		s += "        try {\n"
-		s += "            ResourceContext context = this.delegate.newResourceContext(this.request, this.response);\n"
-	}
+	s := "        try {\n"
+	s += "            ResourceContext context = this.delegate.newResourceContext(this.request, this.response);\n"
 	var fargs []string
 	bodyName := ""
 	if r.Auth != nil {
@@ -734,18 +740,19 @@ func (gen *javaServerGenerator) handlerBody(r *rdl.Resource) string {
 		if async {
 			a = "asyncResp"
 		}
-		rName := capitalize(strings.ToLower(string(r.Method))) + string(r.Type) + "Result"
+		tmp, _ := javaMethodName(gen.registry, r)
+		rName := capitalize(tmp) + "Result"
 		pathParamsArgs := strings.Join(gen.makePathParamsArgs(r), ", ")
 		if pathParamsArgs == "" {
 			pathParamsArgs = "null"
 		}
 		if async {
-			s += "        " + rName + " result = new " + rName + "(context, " + pathParamsArgs + ", " + a + ");\n"
+			s += "            " + rName + " result = new " + rName + "(context, " + pathParamsArgs + ", " + a + ");\n"
 		} else {
-			s += "        " + rName + " result = new " + rName + "(context);\n"
+			s += "            " + rName + " result = new " + rName + "(context);\n"
 		}
 		sargs += ", result"
-		s += "        this.delegate." + methName + "(context" + sargs + ");\n"
+		s += "            this.delegate." + methName + "(context" + sargs + ");\n"
 	} else {
 		s += "            " + returnType + " e = this.delegate." + methName + "(context" + sargs + ");\n"
 		noContent := r.Expected == "NO_CONTENT" && r.Alternatives == nil
@@ -759,28 +766,28 @@ func (gen *javaServerGenerator) handlerBody(r *rdl.Resource) string {
 		} else {
 			s += "            return e;\n"
 		}
-		s += "        } catch (ResourceException e) {\n"
-		s += "            int code = e.getCode();\n"
-		s += "            switch (code) {\n"
-		if len(r.Alternatives) > 0 {
-			for _, alt := range r.Alternatives {
-				s += "            case ResourceException." + alt + ":\n"
-			}
-			s += "                throw typedException(code, e, " + returnType + ".class);\n"
-		}
-		if r.Exceptions != nil && len(r.Exceptions) > 0 {
-			for ecode, edef := range r.Exceptions {
-				etype := edef.Type
-				s += "            case ResourceException." + ecode + ":\n"
-				s += "                throw typedException(code, e, " + etype + ".class);\n"
-			}
-		}
-		s += "            default:\n"
-		s += "                System.err.println(\"*** Warning: undeclared exception (\" + code + \") for resource " + methName + "\");\n"
-		s += "                throw typedException(code, e, ResourceError.class);\n" //? really
-		s += "            }\n"
-		s += "        }\n"
 	}
+	s += "        } catch (ResourceException e) {\n"
+	s += "            int code = e.getCode();\n"
+	s += "            switch (code) {\n"
+	if len(r.Alternatives) > 0 {
+		for _, alt := range r.Alternatives {
+			s += "            case ResourceException." + alt + ":\n"
+		}
+		s += "                throw typedException(code, e, " + returnType + ".class);\n"
+	}
+	if r.Exceptions != nil && len(r.Exceptions) > 0 {
+		for ecode, edef := range r.Exceptions {
+			etype := edef.Type
+			s += "            case ResourceException." + ecode + ":\n"
+			s += "                throw typedException(code, e, " + etype + ".class);\n"
+		}
+	}
+	s += "            default:\n"
+	s += "                System.err.println(\"*** Warning: undeclared exception (\" + code + \") for resource " + methName + "\");\n"
+	s += "                throw typedException(code, e, ResourceError.class);\n" //? really
+	s += "            }\n"
+	s += "        }\n"
 	return s
 }
 
@@ -822,7 +829,6 @@ func (gen *javaServerGenerator) handlerSignature(r *rdl.Resource) string {
 	returnType := javaType(gen.registry, r.Type, false, "", "")
 	reg := gen.registry
 	var params []string
-	bodyType := r.Type
 	if r.Async != nil && *r.Async {
 		params = append(params, "@Suspended AsyncResponse asyncResp")
 		returnType = "void"
@@ -842,8 +848,6 @@ func (gen *javaServerGenerator) handlerSignature(r *rdl.Resource) string {
 			pdecl = fmt.Sprintf("@PathParam(%q) ", k)
 		} else if v.Header != "" {
 			pdecl = fmt.Sprintf("@HeaderParam(%q) ", v.Header)
-		} else {
-			bodyType = v.Type
 		}
 		ptype := javaType(reg, v.Type, true, "", "")
 		params = append(params, pdecl+ptype+" "+javaName(k))
@@ -853,7 +857,8 @@ func (gen *javaServerGenerator) handlerSignature(r *rdl.Resource) string {
 	case "POST", "PUT":
 		spec += "    @Consumes(MediaType.APPLICATION_JSON)\n"
 	}
-	methName := strings.ToLower(string(r.Method)) + string(bodyType)
+
+	methName, _ := javaMethodName(reg, r)
 	return spec + "    public " + returnType + " " + methName + "(" + strings.Join(params, ", ") + ")"
 }
 
@@ -908,7 +913,7 @@ func (gen *javaServerGenerator) serverMethodSignature(r *rdl.Resource) string {
 
 func javaMethodName(reg rdl.TypeRegistry, r *rdl.Resource) (string, []string) {
 	var params []string
-	bodyType := r.Type
+	bodyType := string(safeTypeVarName(r.Type))
 	for _, v := range r.Inputs {
 		if v.Context != "" { //ignore these legacy things
 			log.Println("Warning: v1 style context param ignored:", v.Name, v.Context)
@@ -916,7 +921,7 @@ func javaMethodName(reg rdl.TypeRegistry, r *rdl.Resource) (string, []string) {
 		}
 		k := v.Name
 		if v.QueryParam == "" && !v.PathParam && v.Header == "" {
-			bodyType = v.Type
+			bodyType = string(safeTypeVarName(v.Type))
 		}
 		//rest_core always uses the boxed type
 		optional := true
