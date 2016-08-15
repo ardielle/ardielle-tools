@@ -119,7 +119,7 @@ func swagger(schema *rdl.Schema) (*SwaggerDoc, error) {
 	sname := string(schema.Name)
 	swag := new(SwaggerDoc)
 	swag.Swagger = "2.0"
-	swag.Schemes = []string{"http"}
+	swag.Schemes = []string{}
 	//swag.Host = "localhost"
 	swag.BasePath = "/api"
 
