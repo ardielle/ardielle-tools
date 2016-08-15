@@ -309,6 +309,9 @@ func makeSwaggerTypeDef(reg rdl.TypeRegistry, t *rdl.Type) *SwaggerType {
 				switch fbt {
 				case rdl.BaseTypeArray:
 					prop.Type = "array"
+					if ft.Variant == rdl.TypeVariantArrayTypeDef && f.Items == "" {
+						f.Items = ft.ArrayTypeDef.Items
+					}
 					if f.Items != "" {
 						fitems := string(f.Items)
 						items := new(SwaggerType)
@@ -329,7 +332,7 @@ func makeSwaggerTypeDef(reg rdl.TypeRegistry, t *rdl.Type) *SwaggerType {
 					prop.Type = "integer"
 					prop.Format = strings.ToLower(fbt.String())
 				case rdl.BaseTypeStruct:
-					prop.Type = "#/definitions/" + string(f.Type)
+					prop.Ref = "#/definitions/" + string(f.Type)
 				case rdl.BaseTypeMap:
 					prop.Type = "object"
 					if f.Items != "" {
