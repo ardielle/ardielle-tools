@@ -45,6 +45,7 @@ Generator Options:
   -t              Generate precise type models, i.e. model string and numeric subtypes in Go (default is false)
   -l package      Generate code that imports this package as 'rdl' for base type impl (instead of standard rdl library)
   -u type         Generate the specified union type to JSON serialize as an untagged union. Default is a tagged.
+  -x key=value    Set options for external generator, e.g. -x e=true -xfoo=bar will send -e true --foo bar to external generator.
 
 Generators (accepted arguments to the generate command):
   json        Generate the JSON representation of the schema
@@ -118,6 +119,7 @@ func main() {
 		prefixEnums := cmd.BoolOpt("e", false, "Prefixes enum constant names with their typename (default = false)")
 		ns := cmd.StringOpt("ns", "", "Namespace for the code generation (default = schema namespace)")
 		basePath := cmd.StringOpt("b", "", "Specify the base path of the URL for java server and client generators (default = schema name, snake-cased)")
+		externalOptions := cmd.StringsOpt("x", []string{}, "Set options for external generator, e.g. -x e=true -xfoo=bar will send -e true --foo bar to external generator")
 		generator := cmd.StringArg("GENERATOR", "", "the generator to use")
 		schemaFile := cmd.StringArg("FILE", "", "the rdl file defining the schema")
 		cmd.Action = func() {
@@ -125,7 +127,7 @@ func main() {
 			if schema.Name == "" {
 				schema.Name = name
 			}
-			generate(banner, *generator, *outfile, *librdl, *prefixEnums, *preciseTypes, *ns, schema, *schemaFile, *untaggedUnions, *basePath)
+			generate(banner, *generator, *outfile, *librdl, *prefixEnums, *preciseTypes, *ns, schema, *schemaFile, *untaggedUnions, *basePath, *externalOptions)
 		}
 	})
 	app.Run(os.Args)
@@ -193,7 +195,7 @@ func ensureExtension(name string, ext string) string {
 	return name + ext
 }
 
-func generate(banner string, flavor string, dirName string, librdl string, prefixEnums bool, preciseTypes bool, ns string, schema *rdl.Schema, srcFile string, untaggedUnions []string, base string) {
+func generate(banner string, flavor string, dirName string, librdl string, prefixEnums bool, preciseTypes bool, ns string, schema *rdl.Schema, srcFile string, untaggedUnions []string, base string, externalOptions []string) {
 	var err error
 	switch flavor {
 	case "json":
@@ -211,7 +213,7 @@ func generate(banner string, flavor string, dirName string, librdl string, prefi
 	case "java-client":
 		err = GenerateJavaClient(banner, schema, dirName, ns, base)
 	default:
-		err = generateExternally(flavor, dirName, schema, srcFile)
+		err = generateExternally(flavor, dirName, schema, srcFile, externalOptions)
 	}
 	exitOnError(err)
 }
@@ -223,7 +225,7 @@ func exitOnError(err error) {
 	}
 }
 
-func generateExternally(flavor string, dirName string, schema *rdl.Schema, srcFile string) error {
+func generateExternally(flavor string, dirName string, schema *rdl.Schema, srcFile string, options []string) error {
 	cmd := "rdl-gen-" + flavor
 	var argv []string
 	if dirName != "" {
@@ -232,6 +234,17 @@ func generateExternally(flavor string, dirName string, schema *rdl.Schema, srcFi
 	}
 	argv = append(argv, "-s")
 	argv = append(argv, srcFile)
+	for _,option := range options {
+		substrings := strings.SplitN(option, "=", 2)
+		if len(substrings[0]) > 1 {
+			argv = append(argv, "--" + substrings[0]);
+		} else {
+			argv = append(argv, "-" + substrings[0]);
+		}
+		if (len(substrings) > 1) {
+			argv = append(argv, substrings[1]);
+		}
+	}
 	return callSubcommand(cmd, argv, schema)
 }
 
