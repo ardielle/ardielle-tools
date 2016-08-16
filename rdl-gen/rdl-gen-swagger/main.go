@@ -23,13 +23,14 @@ import (
 func main() {
 	pOutdir := flag.String("o", ".", "Output directory")
 	flag.String("s", "", "RDL source file")
+	basePath := flag.String("b", "/api", "Base path")
 	flag.Parse()
 	data, err := ioutil.ReadAll(os.Stdin)
 	if err == nil {
 		var schema rdl.Schema
 		err = json.Unmarshal(data, &schema)
 		if err == nil {
-			ExportToSwagger(&schema, *pOutdir)
+			ExportToSwagger(&schema, *pOutdir, *basePath)
 			os.Exit(0)
 		}
 	}
@@ -65,9 +66,9 @@ func outputWriter(outdir string, name string, ext string) (*bufio.Writer, *os.Fi
 
 // ExportToSwagger exports the RDL schema to Swagger 2.0 format,
 //   and serves it up on the specified server endpoint is provided, or outputs to stdout otherwise.
-func ExportToSwagger(schema *rdl.Schema, outdir string) error {
+func ExportToSwagger(schema *rdl.Schema, outdir string, basePath string) error {
 	sname := string(schema.Name)
-	swaggerData, err := swagger(schema)
+	swaggerData, err := swagger(schema, basePath)
 	if err != nil {
 		return err
 	}
@@ -114,19 +115,19 @@ func ExportToSwagger(schema *rdl.Schema, outdir string) error {
 	return http.ListenAndServe(outdir, nil)
 }
 
-func swagger(schema *rdl.Schema) (*SwaggerDoc, error) {
+func swagger(schema *rdl.Schema, basePath string) (*SwaggerDoc, error) {
 	reg := rdl.NewTypeRegistry(schema)
 	sname := string(schema.Name)
 	swag := new(SwaggerDoc)
 	swag.Swagger = "2.0"
 	swag.Schemes = []string{}
 	//swag.Host = "localhost"
-	swag.BasePath = "/api"
+	swag.BasePath = basePath
 
 	title := "API"
 	if sname != "" {
 		title = "The " + sname + " API"
-		swag.BasePath = "/api/" + sname
+		swag.BasePath += "/" + sname
 	}
 	swag.Info = new(SwaggerInfo)
 	swag.Info.Title = title
