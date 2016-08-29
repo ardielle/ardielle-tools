@@ -40,6 +40,7 @@ The `rdl` tool has the following usage:
 	  -t              Generate precise type models, i.e. model string and numeric subtypes in Go (default is false)
 	  -l package      Generate code that imports this package as 'rdl' for base type impl (instead of standard rdl library)
 	  -u type         Generate the specified union type to JSON serialize as an untagged union. Default is a tagged.
+	  -x key=value    Set options for external generator, e.g. -x e=true -xfoo=bar will send -e true --foo bar to external generator.
 
 	Generators (accepted arguments to the generate command):
 
