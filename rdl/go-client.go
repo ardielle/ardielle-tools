@@ -118,7 +118,6 @@ func (client {{client}}) httpGet(url string, headers map[string]string) (*http.R
 	if err != nil {
 		return nil, err
 	}
-	req.Close = true // close req to avoid leaking fd's as new client being created now
 	client.addAuthHeader(req)
     if headers != nil {
 		for k, v := range headers {
@@ -134,7 +133,6 @@ func (client {{client}}) httpDelete(url string, headers map[string]string) (*htt
 	if err != nil {
 		return nil, err
 	}
-	req.Close = true // close req to avoid leaking fd's as new client being created now
 	client.addAuthHeader(req)
     if headers != nil {
 		for k, v := range headers {
@@ -151,7 +149,6 @@ func (client {{client}}) httpPut(url string, headers map[string]string, body []b
 	if err != nil {
 		return nil, err
 	}
-	req.Close = true // close req to avoid leaking fd's as new client being created now
 	req.Header.Add("Content-type", "application/json")
 	client.addAuthHeader(req)
     if headers != nil {
@@ -169,7 +166,6 @@ func (client {{client}}) httpPost(url string, headers map[string]string, body []
 	if err != nil {
 		return nil, err
 	}
-	req.Close = true // close req to avoid leaking fd's as new client being created now
 	req.Header.Add("Content-type", "application/json")
 	client.addAuthHeader(req)
     if headers != nil {
@@ -187,7 +183,6 @@ func (client {{client}}) httpPatch(url string, headers map[string]string, body [
 	if err != nil {
 		return nil, err
 	}
-	req.Close = true // close req to avoid leaking fd's as new client being created now
 	req.Header.Add("Content-type", "application/json")
 	client.addAuthHeader(req)
     if headers != nil {
@@ -208,7 +203,6 @@ func (client {{client}}) httpOptions(url string, headers map[string]string, body
 	if err != nil {
 		return nil, err
 	}
-	req.Close = true // close req to avoid leaking fd's as new client being created now
 	if contentReader != nil {
 		req.Header.Add("Content-type", "application/json")
 	}
