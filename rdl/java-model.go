@@ -254,7 +254,7 @@ func javaType(reg rdl.TypeRegistry, rdlType rdl.TypeRef, optional bool, items rd
 				i = items
 			}
 		}
-		gitems := javaType(reg, rdl.TypeRef(i), false, "", "")
+		gitems := javaType(reg, rdl.TypeRef(i), true, "", "")
 		//return gitems + "[]" //if arrays, not lists
 		return "List<" + gitems + ">"
 	case rdl.BaseTypeMap:
@@ -272,8 +272,8 @@ func javaType(reg rdl.TypeRegistry, rdlType rdl.TypeRef, optional bool, items rd
 				i = items
 			}
 		}
-		gkeys := javaType(reg, k, false, "", "")
-		gitems := javaType(reg, i, false, "", "")
+		gkeys := javaType(reg, k, true, "", "")
+		gitems := javaType(reg, i, true, "", "")
 		return "Map<" + gkeys + ", " + gitems + ">"
 	case rdl.BaseTypeStruct:
 		if strings.HasPrefix(string(rdlType), "rdl.") {
