@@ -11,17 +11,18 @@ import (
 )
 
 type javaModelGenerator struct {
-	registry rdl.TypeRegistry
-	schema   *rdl.Schema
-	name     string
-	writer   *bufio.Writer
-	err      error
-	ns       string
-	jackson  bool
+	registry   rdl.TypeRegistry
+	schema     *rdl.Schema
+	name       string
+	writer     *bufio.Writer
+	err        error
+	ns         string
+	jackson    bool
+	getSetters bool
 }
 
 // GenerateJavaModel generates the model code for the types defined in the RDL schema.
-func GenerateJavaModel(banner string, schema *rdl.Schema, outdir string, ns string) error {
+func GenerateJavaModel(banner string, schema *rdl.Schema, outdir string, ns string, getSetters bool) error {
 	packageDir, err := javaGenerationDir(outdir, schema, ns)
 	if err != nil {
 		return err
@@ -32,7 +33,7 @@ func GenerateJavaModel(banner string, schema *rdl.Schema, outdir string, ns stri
 		if strings.HasPrefix(string(tName), "rdl.") {
 			continue
 		}
-		err := generateJavaType(banner, schema, registry, packageDir, t, ns)
+		err := generateJavaType(banner, schema, registry, packageDir, t, ns, getSetters)
 		if err != nil {
 			return err
 		}
@@ -51,7 +52,7 @@ func GenerateJavaModel(banner string, schema *rdl.Schema, outdir string, ns stri
 	return nil
 }
 
-func generateJavaType(banner string, schema *rdl.Schema, registry rdl.TypeRegistry, outdir string, t *rdl.Type, ns string) error {
+func generateJavaType(banner string, schema *rdl.Schema, registry rdl.TypeRegistry, outdir string, t *rdl.Type, ns string, getSetters bool) error {
 	tName, _, _ := rdl.TypeInfo(t)
 	bt := registry.BaseType(t)
 	switch bt {
@@ -69,7 +70,7 @@ func generateJavaType(banner string, schema *rdl.Schema, registry rdl.TypeRegist
 	if file != nil {
 		defer file.Close()
 	}
-	gen := &javaModelGenerator{registry, schema, string(tName), out, nil, ns, true}
+	gen := &javaModelGenerator{registry, schema, string(tName), out, nil, ns, true, getSetters}
 	gen.emitHeader(banner, ns, bt, t)
 	switch bt {
 	case rdl.BaseTypeStruct:
@@ -626,7 +627,12 @@ func (gen *javaModelGenerator) emitStructFields(fields []*rdl.StructFieldDef, na
 		for i := range fields {
 			fname := fnames[i]
 			ftype := ftypes[i]
-			gen.emit(fmt.Sprintf("    public %s %s(%s %s) {\n        this.%s = %s;\n        return this;\n    }\n", cName, fname, ftype, fname, fname, fname))
+			if gen.getSetters {
+				gen.emit(fmt.Sprintf("    public %s set%s(%s %s) {\n        this.%s = %s;\n        return this;\n    }\n", cName, capitalize(fname), ftype, fname, fname, fname))
+				gen.emit(fmt.Sprintf("    public %s get%s() {\n        return %s;\n    }\n", ftype, capitalize(fname), fname))
+			} else {
+				gen.emit(fmt.Sprintf("    public %s %s(%s %s) {\n        this.%s = %s;\n        return this;\n    }\n", cName, fname, ftype, fname, fname, fname))
+			}
 		}
 		gen.emit("\n")
 		gen.emit("    @Override\n    public boolean equals(Object another) {\n")
