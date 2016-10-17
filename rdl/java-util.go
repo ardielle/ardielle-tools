@@ -8,6 +8,7 @@ import (
 	"github.com/ardielle/ardielle-go/rdl"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"text/template"
 	"unicode"
@@ -22,6 +23,43 @@ func javaGenerationPackage(schema *rdl.Schema, ns string) string {
 		return ns
 	}
 	return string(schema.Namespace)
+}
+
+func javaGenerationBoolOptionSet(options []string, key string) bool {
+	for _, option := range options {
+		substrings := strings.SplitN(option, "=", 2)
+		// make sure we got 2 values back
+		if len(substrings) != 2 {
+			continue
+		}
+		// continue if the key name does not match our option
+		if substrings[0] != key {
+			continue
+		}
+		value, err := strconv.ParseBool(substrings[1])
+		if err == nil {
+			return value
+		} else {
+			return false
+		}
+	}
+	return false
+}
+
+func javaGenerationStringOptionSet(options []string, key string) string {
+	for _, option := range options {
+		substrings := strings.SplitN(option, "=", 2)
+		// make sure we got 2 values back
+		if len(substrings) != 2 {
+			continue
+		}
+		// continue if the key name does not match our option
+		if substrings[0] != key {
+			continue
+		}
+		return substrings[1]
+	}
+	return ""
 }
 
 func camelSnakeToKebab(name string) string {

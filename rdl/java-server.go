@@ -26,7 +26,7 @@ type javaServerGenerator struct {
 }
 
 // GenerateJavaServer generates the server code for the RDL-defined service
-func GenerateJavaServer(banner string, schema *rdl.Schema, outdir string, ns string, base string) error {
+func GenerateJavaServer(banner string, schema *rdl.Schema, outdir string, ns string, base string, options []string) error {
 	reg := rdl.NewTypeRegistry(schema)
 	packageDir, err := javaGenerationDir(outdir, schema, ns)
 	if err != nil {

@@ -22,13 +22,17 @@ type javaClientGenerator struct {
 }
 
 // GenerateJavaClient generates the client code to talk to the server
-func GenerateJavaClient(banner string, schema *rdl.Schema, outdir string, ns string, base string) error {
+func GenerateJavaClient(banner string, schema *rdl.Schema, outdir string, ns string, base string, options []string) error {
 	reg := rdl.NewTypeRegistry(schema)
 	packageDir, err := javaGenerationDir(outdir, schema, ns)
 	if err != nil {
 		return err
 	}
-	cName := capitalize(string(schema.Name))
+
+	cName := javaGenerationStringOptionSet(options, "clientclass")
+	if cName == "" {
+		cName = capitalize(string(schema.Name))
+	}
 
 	out, file, _, err := outputWriter(packageDir, cName, "Client.java")
 	if err != nil {

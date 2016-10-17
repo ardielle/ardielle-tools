@@ -207,11 +207,11 @@ func generate(banner string, flavor string, dirName string, librdl string, prefi
 	case "go-client":
 		err = GenerateGoClient(banner, schema, dirName, ns, librdl, prefixEnums, preciseTypes)
 	case "java-model":
-		err = GenerateJavaModel(banner, schema, dirName, ns) //untaggedUnions
+		err = GenerateJavaModel(banner, schema, dirName, ns, externalOptions)
 	case "java-server":
-		err = GenerateJavaServer(banner, schema, dirName, ns, base)
+		err = GenerateJavaServer(banner, schema, dirName, ns, base, externalOptions)
 	case "java-client":
-		err = GenerateJavaClient(banner, schema, dirName, ns, base)
+		err = GenerateJavaClient(banner, schema, dirName, ns, base, externalOptions)
 	default:
 		err = generateExternally(flavor, dirName, schema, srcFile, externalOptions)
 	}
@@ -234,15 +234,15 @@ func generateExternally(flavor string, dirName string, schema *rdl.Schema, srcFi
 	}
 	argv = append(argv, "-s")
 	argv = append(argv, srcFile)
-	for _,option := range options {
+	for _, option := range options {
 		substrings := strings.SplitN(option, "=", 2)
 		if len(substrings[0]) > 1 {
-			argv = append(argv, "--" + substrings[0]);
+			argv = append(argv, "--"+substrings[0])
 		} else {
-			argv = append(argv, "-" + substrings[0]);
+			argv = append(argv, "-"+substrings[0])
 		}
-		if (len(substrings) > 1) {
-			argv = append(argv, substrings[1]);
+		if len(substrings) > 1 {
+			argv = append(argv, substrings[1])
 		}
 	}
 	return callSubcommand(cmd, argv, schema)
