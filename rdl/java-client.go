@@ -102,14 +102,33 @@ import com.yahoo.rdl.*;
 import javax.ws.rs.client.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
+import javax.net.ssl.HostnameVerifier;
 
 public class {{cName}}Client {
+    Client client;
     WebTarget base;
     String credsHeader;
     String credsToken;
 
     public {{cName}}Client(String url) {
-        base = ClientBuilder.newClient().target(url);
+        client = ClientBuilder.newClient();
+        base = client.target(url);
+    }
+
+    public {{cName}}Client(String url, HostnameVerifier hostnameVerifier) {
+        client = ClientBuilder.newBuilder()
+            .hostnameVerifier(hostnameVerifier)
+            .build();
+        base = client.target(url);
+    }
+
+    public void close() {
+        client.close();
+    }
+
+    public {{cName}}Client setProperty(String name, Object value) {
+        client = client.property(name, value);
+        return this;
     }
 
     public {{cName}}Client addCredentials(String header, String token) {
@@ -171,7 +190,7 @@ func (gen *javaClientGenerator) clientMethodBody(r *rdl.Resource) string {
 	s += "\n"
 	switch r.Method {
 	case "PUT", "POST":
-		s += "        Response response = invocationBuilder." + strings.ToLower(r.Method) + "(Entity.entity(" + entityName + ", \"application/json\"));\n"
+		s += "        Response response = invocationBuilder." + strings.ToLower(r.Method) + "(javax.ws.rs.client.Entity.entity(" + entityName + ", \"application/json\"));\n"
 	default:
 		s += "        Response response = invocationBuilder." + strings.ToLower(r.Method) + "();\n"
 	}
