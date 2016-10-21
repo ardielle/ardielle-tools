@@ -6,6 +6,7 @@ package main
 import (
 	"bufio"
 	"github.com/ardielle/ardielle-go/rdl"
+	"log"
 	"strings"
 	"text/template"
 )
@@ -184,6 +185,15 @@ func (gen *javaClientGenerator) clientMethodBody(r *rdl.Resource) string {
 		s += q
 	}
 	s += "\n        Invocation.Builder invocationBuilder = target.request(\"application/json\");"
+	if r.Auth != nil {
+		if r.Auth.Authenticate || (r.Auth.Action != "" && r.Auth.Resource != "") {
+			s += "\n        if (credsHeader != null) {"
+			s += "\n            invocationBuilder = invocationBuilder.header(credsHeader, credsToken);"
+			s += "\n        }"
+		} else {
+			log.Println("*** Badly formed auth spec in resource input:", r)
+		}
+	}
 	if h != "" {
 		s += h
 	}
