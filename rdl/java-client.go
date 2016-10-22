@@ -104,6 +104,10 @@ import javax.ws.rs.client.*;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 import javax.net.ssl.HostnameVerifier;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 
 public class {{cName}}Client {
     Client client;
@@ -152,6 +156,13 @@ func (gen *javaClientGenerator) clientMethodSignature(r *rdl.Resource) string {
 	sparams := ""
 	if len(params) > 0 {
 		sparams = strings.Join(params, ", ")
+	}
+	if len(r.Outputs) > 0 {
+		if sparams == "" {
+			sparams = "Map<String,List<String>> headers"
+		} else {
+			sparams = sparams + ", Map<String,List<String>> headers"
+		}
 	}
 	return "public " + returnType + " " + methName + "(" + sparams + ")"
 }
@@ -211,6 +222,14 @@ func (gen *javaClientGenerator) clientMethodBody(r *rdl.Resource) string {
 		expected += "|| status.equals(\"" + alt + "\")"
 	}
 	s += "        if (" + expected + ") {\n"
+	if len(r.Outputs) > 0 {
+		s += "            if (headers != null) {\n"
+		for _, out := range r.Outputs {
+			s += "                headers.put(\"" + string(out.Name) + "\", Arrays.asList((String)response.getHeaders().getFirst(\"" + out.Header + "\")));\n"
+		}
+		s += "            }\n"
+	}
+
 	s += "            return response.readEntity(" + returnType + ".class);\n"
 	if r.Exceptions != nil {
 		for k, v := range r.Exceptions {
