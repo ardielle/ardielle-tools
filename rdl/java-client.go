@@ -153,6 +153,13 @@ func (gen *javaClientGenerator) clientMethodSignature(r *rdl.Resource) string {
 	if len(params) > 0 {
 		sparams = strings.Join(params, ", ")
 	}
+	if len(r.Outputs) > 0 {
+		if sparams == "" {
+			sparams = "java.util.Map<String,java.util.List<String>> headers"
+		} else {
+			sparams = sparams + ", java.util.Map<String,java.util.List<String>> headers"
+		}
+	}
 	return "public " + returnType + " " + methName + "(" + sparams + ")"
 }
 
@@ -211,6 +218,14 @@ func (gen *javaClientGenerator) clientMethodBody(r *rdl.Resource) string {
 		expected += "|| status.equals(\"" + alt + "\")"
 	}
 	s += "        if (" + expected + ") {\n"
+	if len(r.Outputs) > 0 {
+		s += "            if (headers != null) {\n"
+		for _, out := range r.Outputs {
+			s += "                headers.put(\"" + string(out.Name) + "\", java.util.Arrays.asList((String)response.getHeaders().getFirst(\"" + out.Header + "\")));\n"
+		}
+		s += "            }\n"
+	}
+
 	s += "            return response.readEntity(" + returnType + ".class);\n"
 	if r.Exceptions != nil {
 		for k, v := range r.Exceptions {
