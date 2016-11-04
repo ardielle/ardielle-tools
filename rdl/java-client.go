@@ -52,7 +52,7 @@ func GenerateJavaClient(banner string, schema *rdl.Schema, outdir string, ns str
 	if err != nil {
 		return err
 	}
-	err = javaGenerateResourceException(schema, out, ns)
+	err = javaGenerateResourceException(banner, schema, out, ns)
 	out.Flush()
 	file.Close()
 	if err != nil {
@@ -64,7 +64,7 @@ func GenerateJavaClient(banner string, schema *rdl.Schema, outdir string, ns str
 	if err != nil {
 		return err
 	}
-	err = javaGenerateResourceError(schema, out, ns)
+	err = javaGenerateResourceError(banner, schema, out, ns)
 	out.Flush()
 	file.Close()
 	return err
@@ -212,26 +212,12 @@ func (gen *javaClientGenerator) clientMethodBody(r *rdl.Resource) string {
 		s += "        Response response = invocationBuilder." + strings.ToLower(r.Method) + "();\n"
 	}
 	s += "        int code = response.getStatus();\n"
-	s += "        switch (code) {\n"
-
-	//loop for all expected results
-	var expected []string
-	expected = append(expected, rdl.StatusCode(r.Expected))
-	couldBeNoContent := "NO_CONTENT" == r.Expected
-	couldBeNotModified := "NOT_MODIFIED" == r.Expected
-	noContent := couldBeNoContent && r.Alternatives == nil
-	for _, e := range r.Alternatives {
-		if "NO_CONTENT" == e {
-			couldBeNoContent = true
-		}
-		if "NOT_MODIFIED" == e {
-			couldBeNotModified = true
-		}
-		expected = append(expected, rdl.StatusCode(e))
+	s += "        String status = Response.Status.fromStatusCode(code).toString();\n"
+	expected := "status.equals(\"" + r.Expected + "\")"
+	for _, alt := range r.Alternatives {
+		expected += "|| status.equals(\"" + alt + "\")"
 	}
-	for _, expCode := range expected {
-		s += "        case " + expCode + ":\n"
-	}
+	s += "        if (" + expected + ") {\n"
 	if len(r.Outputs) > 0 {
 		s += "            if (headers != null) {\n"
 		for _, out := range r.Outputs {
@@ -239,34 +225,16 @@ func (gen *javaClientGenerator) clientMethodBody(r *rdl.Resource) string {
 		}
 		s += "            }\n"
 	}
-	if noContent {
-		s += "            return null;\n"
-	} else {
-		if couldBeNoContent || couldBeNotModified {
-			s += "            if (" + gen.responseCondition(couldBeNoContent, couldBeNotModified) + ") {\n"
-			s += "                return null;\n"
-			s += "            }\n"
-		}
-		s += "            return response.readEntity(" + returnType + ".class);\n"
-	}
-	s += "        default:\n"
-	if r.Exceptions != nil {
-		s += "            throw new ResourceException(code, response.readEntity(ResourceError.class));\n"
-	} else {
-		s += "            throw new ResourceException(code, response.readEntity(Object.class));\n"
-	}
-	s += "        }\n"
-	return s
-}
 
-func (gen *javaClientGenerator) responseCondition(noContent, notModified bool) string {
-	var s string
-	if noContent && notModified {
-		s += "code == " + rdl.StatusCode("NO_CONTENT") + " || code == " + rdl.StatusCode("NOT_MODIFIED")
-	} else if noContent {
-		s += "code == " + rdl.StatusCode("NO_CONTENT")
-	} else {
-		s += "code == " + rdl.StatusCode("NOT_MODIFIED")
+	s += "            return response.readEntity(" + returnType + ".class);\n"
+	if r.Exceptions != nil {
+		for k, v := range r.Exceptions {
+			s += "        } else if (status.equals(\"" + k + "\")) {\n"
+			s += "            throw new ResourceException(code, response.readEntity(" + v.Type + ".class));\n"
+		}
 	}
+	s += "        } else {\n"
+	s += "            throw new ResourceException(code, response.readEntity(Object.class));\n"
+	s += "        }\n"
 	return s
 }

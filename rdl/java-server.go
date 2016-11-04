@@ -112,7 +112,7 @@ func GenerateJavaServer(banner string, schema *rdl.Schema, outdir string, ns str
 	if err != nil {
 		return err
 	}
-	err = javaGenerateResourceException(schema, out, ns)
+	err = javaGenerateResourceException(banner, schema, out, ns)
 	out.Flush()
 	file.Close()
 	if err != nil {
@@ -125,7 +125,7 @@ func GenerateJavaServer(banner string, schema *rdl.Schema, outdir string, ns str
 	if err != nil {
 		return err
 	}
-	err = javaGenerateResourceError(schema, out, ns)
+	err = javaGenerateResourceError(banner, schema, out, ns)
 	out.Flush()
 	file.Close()
 	return err
