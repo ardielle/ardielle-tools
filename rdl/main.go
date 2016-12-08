@@ -56,7 +56,7 @@ Generators (accepted arguments to the generate command):
   java-model  Generate the Java code for the types in the schema
   java-client Generate the Java code for a client to the resources in the schema
   java-server Generate the Java code for a server implementation  of the resources in the schema
-  swagger     Generage the swagger resource for the schema. If the outfile is an endpoint, serve it via HTTP.
+  swagger     Generate the swagger resource for the schema. If the outfile is an endpoint, serve it via HTTP.
   legacy      Generate the legacy (RDL v1) JSON representation of the schema
 
   <name>      Invoke an external generator named 'rdl-gen-<name>', searched for in your $PATH. The
