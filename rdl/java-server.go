@@ -9,6 +9,7 @@ import (
 	"github.com/ardielle/ardielle-go/rdl"
 	"log"
 	"os"
+	"sort"
 	"strings"
 	"text/template"
 )
@@ -777,8 +778,9 @@ func (gen *javaServerGenerator) handlerBody(r *rdl.Resource) string {
 		s += "                throw typedException(code, e, " + returnType + ".class);\n"
 	}
 	if r.Exceptions != nil && len(r.Exceptions) > 0 {
-		for ecode, edef := range r.Exceptions {
-			etype := edef.Type
+		keys := sortedExceptionKeys(r.Exceptions)
+		for _, ecode := range keys {
+			etype := r.Exceptions[ecode].Type
 			s += "            case ResourceException." + ecode + ":\n"
 			s += "                throw typedException(code, e, " + etype + ".class);\n"
 		}
@@ -937,4 +939,13 @@ func javaName(name rdl.Identifier) string {
 	default:
 		return string(name)
 	}
+}
+
+func sortedExceptionKeys(excs map[string]*rdl.ExceptionDef) []string {
+	var keys []string
+	for ecode, _ := range excs {
+		keys = append(keys, ecode)
+	}
+	sort.Strings(keys)
+	return keys
 }
