@@ -75,8 +75,14 @@ func (gen *javaClientGenerator) processTemplate(templateSource string) error {
 		return formatComment(s, 0, 80)
 	}
 	funcMap := template.FuncMap{
-		"header":     func() string { return javaGenerationHeader(gen.banner) },
-		"package":    func() string { return javaGenerationPackage(gen.schema, gen.ns) },
+		"header": func() string { return javaGenerationHeader(gen.banner) },
+		"package": func() string {
+			s := javaGenerationPackage(gen.schema, gen.ns)
+			if s == "" {
+				return s
+			}
+			return "package " + s + ";\n"
+		},
 		"comment":    commentFun,
 		"methodSig":  func(r *rdl.Resource) string { return gen.clientMethodSignature(r) },
 		"methodBody": func(r *rdl.Resource) string { return gen.clientMethodBody(r) },
@@ -98,7 +104,7 @@ func (gen *javaClientGenerator) resourcePath(r *rdl.Resource) string {
 }
 
 const javaClientTemplate = `{{header}}
-package {{package}};
+{{package}}
 import com.yahoo.rdl.*;
 import javax.ws.rs.client.*;
 import javax.ws.rs.*;
