@@ -585,7 +585,13 @@ func goMethodName(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) (string, 
 		}
 		params = append(params, goName(string(k))+" "+goType(reg, v.Type, optional, "", "", precise, true))
 	}
-	return strings.ToLower(string(r.Method)) + bodyType, params
+	meth := string(r.Name)
+	if meth == "" {
+		meth = strings.ToLower(string(r.Method)) + bodyType
+	} else {
+		meth = capitalize(meth)
+	}
+	return meth, params
 }
 
 func goName(name string) string {

@@ -929,7 +929,13 @@ func javaMethodName(reg rdl.TypeRegistry, r *rdl.Resource) (string, []string) {
 		optional := true
 		params = append(params, javaType(reg, v.Type, optional, "", "")+" "+javaName(k))
 	}
-	return strings.ToLower(string(r.Method)) + string(bodyType), params
+	meth := string(r.Name)
+	if meth == "" {
+		meth = strings.ToLower(string(r.Method)) + string(bodyType)
+	} else {
+		meth = uncapitalize(meth)
+	}
+	return meth, params
 }
 
 func javaName(name rdl.Identifier) string {
