@@ -147,8 +147,14 @@ func javaServerMakeAsyncResultModel(banner string, schema *rdl.Schema, reg rdl.T
 	rType := javaType(reg, rdl.TypeRef(r.Type), false, "", "")
 	gen := &javaServerGenerator{reg, schema, cName, out, nil, banner, ns, true, base}
 	funcMap := template.FuncMap{
-		"header":     func() string { return javaGenerationHeader(gen.banner) },
-		"package":    func() string { return javaGenerationPackage(gen.schema, ns) },
+		"header": func() string { return javaGenerationHeader(gen.banner) },
+		"package": func() string {
+			s := javaGenerationPackage(gen.schema, ns)
+			if s == "" {
+				return s
+			}
+			return "package " + s + ";\n"
+		},
 		"openBrace":  func() string { return "{" },
 		"name":       func() string { return uncapitalize(string(safeTypeVarName(r.Type))) },
 		"cName":      func() string { return string(rType) },
@@ -187,8 +193,14 @@ func javaServerMakeResultModel(banner string, schema *rdl.Schema, reg rdl.TypeRe
 	rType := javaType(reg, rdl.TypeRef(r.Type), false, "", "")
 	gen := &javaServerGenerator{reg, schema, cName, out, nil, banner, ns, false, base}
 	funcMap := template.FuncMap{
-		"header":     func() string { return javaGenerationHeader(gen.banner) },
-		"package":    func() string { return javaGenerationPackage(gen.schema, ns) },
+		"header": func() string { return javaGenerationHeader(gen.banner) },
+		"package": func() string {
+			s := javaGenerationPackage(gen.schema, ns)
+			if s == "" {
+				return s
+			}
+			return "package " + s + ";\n"
+		},
 		"openBrace":  func() string { return "{" },
 		"name":       func() string { return uncapitalize(string(safeTypeVarName(r.Type))) },
 		"cName":      func() string { return string(rType) },
@@ -334,7 +346,7 @@ func (gen *javaServerGenerator) makeHeaderAssign(r *rdl.Resource) string {
 }
 
 const javaServerHandlerTemplate = `{{header}}
-package {{package}};
+{{package}}
 import com.yahoo.rdl.*;
 import java.util.*;
 import javax.servlet.http.HttpServletRequest;
@@ -349,7 +361,7 @@ public interface {{cName}}Handler {{openBrace}} {{range .Resources}}
 }
 `
 const javaServerResultTemplate = `{{header}}
-package {{package}};
+{{package}}
 import com.yahoo.rdl.*;
 import java.util.*;
 import javax.ws.rs.core.Response;
@@ -393,7 +405,7 @@ public final class {{rName}} {
 }
 `
 const javaServerAsyncResultTemplate = `{{header}}
-package {{package}};
+{{package}}
 import com.yahoo.rdl.*;
 import java.util.*;
 import javax.ws.rs.container.AsyncResponse;
@@ -497,7 +509,7 @@ public final class {{rName}} implements TimeoutHandler {
 `
 
 const javaServerContextTemplate = `{{header}}
-package {{package}};
+{{package}}
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -513,7 +525,7 @@ public interface ResourceContext {
 `
 
 const javaServerInitTemplate = `{{header}}
-package {{package}};
+{{package}}
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
@@ -553,7 +565,7 @@ public class {{cName}}Server {
 `
 
 const javaServerTemplate = `{{header}}
-package {{package}};
+{{package}}
 import com.yahoo.rdl.*;
 import java.util.*;
 import javax.ws.rs.*;
@@ -640,8 +652,14 @@ func (gen *javaServerGenerator) processTemplate(templateSource string) error {
 		return fmt.Sprintf("%s %s%s", fName, fType, fAnno)
 	}
 	funcMap := template.FuncMap{
-		"header":      func() string { return javaGenerationHeader(gen.banner) },
-		"package":     func() string { return javaGenerationPackage(gen.schema, gen.ns) },
+		"header": func() string { return javaGenerationHeader(gen.banner) },
+		"package": func() string {
+			s := javaGenerationPackage(gen.schema, gen.ns)
+			if s == "" {
+				return s
+			}
+			return "package " + s + ";\n"
+		},
 		"openBrace":   func() string { return "{" },
 		"field":       fieldFun,
 		"flattened":   func(t *rdl.Type) []*rdl.StructFieldDef { return flattenedFields(gen.registry, t) },
@@ -929,7 +947,13 @@ func javaMethodName(reg rdl.TypeRegistry, r *rdl.Resource) (string, []string) {
 		optional := true
 		params = append(params, javaType(reg, v.Type, optional, "", "")+" "+javaName(k))
 	}
-	return strings.ToLower(string(r.Method)) + string(bodyType), params
+	meth := string(r.Name)
+	if meth == "" {
+		meth = strings.ToLower(string(r.Method)) + string(bodyType)
+	} else {
+		meth = uncapitalize(meth)
+	}
+	return meth, params
 }
 
 func javaName(name rdl.Identifier) string {

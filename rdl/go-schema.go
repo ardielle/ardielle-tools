@@ -101,9 +101,15 @@ func (gen *schemaGenerator) emitResource(rez *rdl.Resource) {
 	}
 	rVarName := safeTypeVarName(rTypeName)
 	rname := fmt.Sprintf("r%s%s", capitalize(strings.ToLower(rez.Method)), rVarName)
+	if rez.Name != "" {
+		rname = "r" + capitalize(string(rez.Name))
+	}
 	gen.emit(fmt.Sprintf("\t%s := rdl.NewResourceBuilder(%q, %q, %q)\n", rname, rez.Type, rez.Method, rez.Path))
 	if rez.Comment != "" {
 		gen.emit(fmt.Sprintf("\t%s.Comment(%q)\n", rname, rez.Comment))
+	}
+	if rez.Name != "" {
+		gen.emit(fmt.Sprintf("\t%s.Name(%q)\n", rname, rez.Name))
 	}
 	for _, ri := range rez.Inputs {
 		def := "nil"

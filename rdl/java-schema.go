@@ -222,6 +222,9 @@ func javaGenerateResourceConstructor(reg rdl.TypeRegistry, rez *rdl.Resource) st
 	if rez.Comment != "" {
 		s += fmt.Sprintf("\n            .comment(%q)", rez.Comment)
 	}
+	if rez.Name != "" {
+		s += fmt.Sprintf("\n            .name(%q)", rez.Name)
+	}
 	for _, ri := range rez.Inputs {
 		def := "null"
 		if ri.Default != nil {
