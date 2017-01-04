@@ -382,6 +382,8 @@ func goType(reg rdl.TypeRegistry, rdlType rdl.TypeRef, optional bool, items rdl.
 		return "*" + cleanType
 	case rdl.BaseTypeEnum:
 		return prefix + cleanType
+	case rdl.BaseTypeBytes:
+		return "[]byte"
 	default:
 		return prefix + cleanType
 	}
