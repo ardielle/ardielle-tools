@@ -145,7 +145,7 @@ func (client {{client}}) httpDelete(url string, headers map[string]string) (*htt
 func (client {{client}}) httpPut(url string, headers map[string]string, body []byte) (*http.Response, error) {
 	var contentReader io.Reader
 	if body != nil {
-		contentReader := bytes.NewReader(body)
+		contentReader = bytes.NewReader(body)
 	}
 	hclient := client.getClient()
 	req, err := http.NewRequest("PUT", url, contentReader)
@@ -165,7 +165,7 @@ func (client {{client}}) httpPut(url string, headers map[string]string, body []b
 func (client {{client}}) httpPost(url string, headers map[string]string, body []byte) (*http.Response, error) {
 	var contentReader io.Reader
 	if body != nil {
-		contentReader := bytes.NewReader(body)
+		contentReader = bytes.NewReader(body)
 	}
 	hclient := client.getClient()
 	req, err := http.NewRequest("POST", url, contentReader)
@@ -185,7 +185,7 @@ func (client {{client}}) httpPost(url string, headers map[string]string, body []
 func (client {{client}}) httpPatch(url string, headers map[string]string, body []byte) (*http.Response, error) {
 	var contentReader io.Reader
 	if body != nil {
-		contentReader := bytes.NewReader(body)
+		contentReader = bytes.NewReader(body)
 	}
 	hclient := client.getClient()
 	req, err := http.NewRequest("PATCH", url, contentReader)
