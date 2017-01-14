@@ -288,19 +288,15 @@ func goType2(reg rdl.TypeRegistry, rdlType rdl.TypeRef, optional bool, items rdl
 			bt := reg.BaseType(t)
 			switch bt {
 			case rdl.BaseTypeString, rdl.BaseTypeSymbol:
-				fmt.Println("one:", cleanType)
 				return cleanType
 			case rdl.BaseTypeInt8, rdl.BaseTypeInt16, rdl.BaseTypeInt32, rdl.BaseTypeInt64, rdl.BaseTypeFloat32, rdl.BaseTypeFloat64, rdl.BaseTypeBool:
-				fmt.Println("two:", prefix+cleanType)
 				return prefix + cleanType
 			case rdl.BaseTypeTimestamp, rdl.BaseTypeUUID:
 				fullTypeName := rdlPrefix + cleanType
-				fmt.Println("three:", prefix+fullTypeName)
 				return prefix + fullTypeName
 			default:
 				if lrdlType == "struct" {
 					fullTypeName := rdlPrefix + cleanType
-					fmt.Println("four:", prefix+fullTypeName)
 					return prefix + fullTypeName
 				}
 			}
@@ -334,7 +330,6 @@ func goType2(reg rdl.TypeRegistry, rdlType rdl.TypeRef, optional bool, items rdl
 				name = string(t.ArrayTypeDef.Name)
 			}
 			if name != "Array" {
-				fmt.Println("five:", name)
 				return name
 			}
 		}
