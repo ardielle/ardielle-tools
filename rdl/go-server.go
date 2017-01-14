@@ -56,13 +56,14 @@ package {{package}}
 import (
 	"encoding/json"
 	"fmt"
-	"{{httptreemux}}"
-	rdl "{{rdlruntime}}"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
+
+	rdl "{{rdlruntime}}"
+	"{{httptreemux}}"
 )
 
 var _ = json.Marshal
@@ -569,6 +570,10 @@ func goServerMethodSignature(reg rdl.TypeRegistry, r *rdl.Resource, precise bool
 }
 
 func goMethodName(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) (string, []string) {
+	return goMethodName2(reg, r, precise, "")
+}
+
+func goMethodName2(reg rdl.TypeRegistry, r *rdl.Resource, precise bool, packageName string) (string, []string) {
 	var params []string
 	bodyType := string(safeTypeVarName(r.Type))
 	for _, v := range r.Inputs {
@@ -583,7 +588,7 @@ func goMethodName(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) (string, 
 		if v.Optional {
 			optional = true
 		}
-		params = append(params, goName(string(k))+" "+goType(reg, v.Type, optional, "", "", precise, true))
+		params = append(params, goName(string(k))+" "+goType2(reg, v.Type, optional, "", "", precise, true, packageName))
 	}
 	meth := string(r.Name)
 	if meth == "" {

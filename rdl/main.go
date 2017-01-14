@@ -127,7 +127,7 @@ func main() {
 			if schema.Name == "" {
 				schema.Name = name
 			}
-			generate(banner, *generator, *outfile, *librdl, *prefixEnums, *preciseTypes, *ns, schema, *schemaFile, *untaggedUnions, *basePath, *externalOptions)
+			generate(*schemaFile, banner, *generator, *outfile, *librdl, *prefixEnums, *preciseTypes, *ns, schema, *schemaFile, *untaggedUnions, *basePath, *externalOptions)
 		}
 	})
 	app.Run(os.Args)
@@ -195,7 +195,7 @@ func ensureExtension(name string, ext string) string {
 	return name + ext
 }
 
-func generate(banner string, flavor string, dirName string, librdl string, prefixEnums bool, preciseTypes bool, ns string, schema *rdl.Schema, srcFile string, untaggedUnions []string, base string, externalOptions []string) {
+func generate(schemaFile string, banner string, flavor string, dirName string, librdl string, prefixEnums bool, preciseTypes bool, ns string, schema *rdl.Schema, srcFile string, untaggedUnions []string, base string, externalOptions []string) {
 	var err error
 	switch flavor {
 	case "json":
@@ -206,6 +206,8 @@ func generate(banner string, flavor string, dirName string, librdl string, prefi
 		err = GenerateGoServer(banner, schema, dirName, ns, librdl, prefixEnums, preciseTypes)
 	case "go-client":
 		err = GenerateGoClient(banner, schema, dirName, ns, librdl, prefixEnums, preciseTypes)
+	case "go-server-project":
+		err = GenerateGoServerProject(schemaFile, banner, schema, dirName, ns, librdl, prefixEnums, preciseTypes, untaggedUnions)
 	case "java-model":
 		err = GenerateJavaModel(banner, schema, dirName, ns, externalOptions)
 	case "java-server":

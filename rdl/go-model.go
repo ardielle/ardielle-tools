@@ -6,11 +6,12 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/ardielle/ardielle-go/rdl"
 	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
+
+	"github.com/ardielle/ardielle-go/rdl"
 )
 
 //
@@ -254,6 +255,10 @@ func (gen *modelGenerator) emitTypeComment(t *rdl.Type) {
 }
 
 func goType(reg rdl.TypeRegistry, rdlType rdl.TypeRef, optional bool, items rdl.TypeRef, keys rdl.TypeRef, precise bool, reference bool) string {
+	return goType2(reg, rdlType, optional, items, keys, precise, reference, "")
+}
+
+func goType2(reg rdl.TypeRegistry, rdlType rdl.TypeRef, optional bool, items rdl.TypeRef, keys rdl.TypeRef, precise bool, reference bool, packageName string) string {
 	rdlPrefix := "rdl."
 	if reg.Name() == "rdl" {
 		rdlPrefix = ""
@@ -283,16 +288,19 @@ func goType(reg rdl.TypeRegistry, rdlType rdl.TypeRef, optional bool, items rdl.
 			bt := reg.BaseType(t)
 			switch bt {
 			case rdl.BaseTypeString, rdl.BaseTypeSymbol:
+				fmt.Println("one:", cleanType)
 				return cleanType
 			case rdl.BaseTypeInt8, rdl.BaseTypeInt16, rdl.BaseTypeInt32, rdl.BaseTypeInt64, rdl.BaseTypeFloat32, rdl.BaseTypeFloat64, rdl.BaseTypeBool:
-
+				fmt.Println("two:", prefix+cleanType)
 				return prefix + cleanType
 			case rdl.BaseTypeTimestamp, rdl.BaseTypeUUID:
 				fullTypeName := rdlPrefix + cleanType
+				fmt.Println("three:", prefix+fullTypeName)
 				return prefix + fullTypeName
 			default:
 				if lrdlType == "struct" {
 					fullTypeName := rdlPrefix + cleanType
+					fmt.Println("four:", prefix+fullTypeName)
 					return prefix + fullTypeName
 				}
 			}
@@ -326,6 +334,7 @@ func goType(reg rdl.TypeRegistry, rdlType rdl.TypeRef, optional bool, items rdl.
 				name = string(t.ArrayTypeDef.Name)
 			}
 			if name != "Array" {
+				fmt.Println("five:", name)
 				return name
 			}
 		}
@@ -338,7 +347,7 @@ func goType(reg rdl.TypeRegistry, rdlType rdl.TypeRef, optional bool, items rdl.
 				i = items
 			}
 		}
-		gitems := goType(reg, i, false, "", "", precise, reference)
+		gitems := goType2(reg, i, false, "", "", precise, reference, packageName)
 		return "[]" + gitems
 	case rdl.BaseTypeMap:
 		if reference {
@@ -367,8 +376,8 @@ func goType(reg rdl.TypeRegistry, rdlType rdl.TypeRef, optional bool, items rdl.
 				i = items
 			}
 		}
-		gkeys := goType(reg, k, false, "", "", precise, reference)
-		gitems := goType(reg, i, false, "", "", precise, reference)
+		gkeys := goType2(reg, k, false, "", "", precise, reference, packageName)
+		gitems := goType2(reg, i, false, "", "", precise, reference, packageName)
 		return "map[" + gkeys + "]" + gitems
 	case rdl.BaseTypeStruct:
 		switch t.Variant {
@@ -376,6 +385,9 @@ func goType(reg rdl.TypeRegistry, rdlType rdl.TypeRef, optional bool, items rdl.
 			if t.AliasTypeDef.Name == "Struct" {
 				return prefix + "map[string]interface{}"
 			}
+		}
+		if packageName != "" {
+			return "*" + packageName + "." + cleanType
 		}
 		return "*" + cleanType
 	case rdl.BaseTypeUnion:
