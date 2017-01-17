@@ -969,7 +969,11 @@ func (gen *modelGenerator) emitStructFields(fields []*rdl.StructFieldDef, name r
 					option = ",omitempty"
 				}
 			}
-			fanno := "`json:\"" + string(f.Name) + option + "\"" + optional + "`"
+			jsonName := string(f.Name)
+			if ext, ok := f.Annotations["x_json_name"]; ok {
+				jsonName = string(ext)
+			}
+			fanno := "`json:\"" + jsonName + option + "\"" + optional + "`"
 			if f.Comment != "" {
 				gen.emit("\n" + formatBlock(f.Comment, 0, 72, "\t// "))
 			}
