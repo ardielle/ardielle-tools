@@ -328,7 +328,11 @@ func (gen *clientGenerator) emitClient() error {
 		if optional {
 			option = ",omitempty"
 		}
-		fAnno := "`json:\"" + string(f.Name) + option + "\"`"
+		jsonName := string(f.Name)
+		if ext, ok := f.Annotations["x_json_name"]; ok {
+			jsonName = string(ext)
+		}
+		fAnno := "`json:\"" + jsonName + option + "\"`"
 		return fmt.Sprintf("%s %s%s", fName, fType, fAnno)
 	}
 	funcMap := template.FuncMap{
