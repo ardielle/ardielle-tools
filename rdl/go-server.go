@@ -594,7 +594,7 @@ func goMethodName2(reg rdl.TypeRegistry, r *rdl.Resource, precise bool, packageN
 	if meth == "" {
 		meth = strings.ToLower(string(r.Method)) + bodyType
 	} else {
-		meth = capitalize(meth)
+		meth = uncapitalize(SnakeToCamel(meth))
 	}
 	return meth, params
 }
