@@ -6,3 +6,4 @@ pkg/
 .deps
 *.iml
 .idea
+Makefile

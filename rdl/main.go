@@ -48,20 +48,21 @@ Generator Options:
   -x key=value    Set options for external generator, e.g. -x e=true -xfoo=bar will send -e true --foo bar to external generator.
 
 Generators (accepted arguments to the generate command):
-  json        Generate the JSON representation of the schema
-  markdown    Generate the markdown representation of the schema and its comments
-  go-model    Generate the Go code for the types in the schema
-  go-client   Generate the Go code for a client to the resources in the schema
-  go-server   Generate the Go code for a server implementation  of the resources in the schema
-  java-model  Generate the Java code for the types in the schema
-  java-client Generate the Java code for a client to the resources in the schema
-  java-server Generate the Java code for a server implementation  of the resources in the schema
-  swagger     Generate the swagger resource for the schema. If the outfile is an endpoint, serve it via HTTP.
-  legacy      Generate the legacy (RDL v1) JSON representation of the schema
+  json               Generate the JSON representation of the schema
+  markdown           Generate the markdown representation of the schema and its comments
+  go-model           Generate the Go code for the types in the schema
+  go-client          Generate the Go code for a client to the resources in the schema
+  go-server          Generate the Go code for a server implementation  of the resources in the schema
+  go-server-project  Generate the project directory containing Go code for server and model and a mock implementation
+  java-model         Generate the Java code for the types in the schema
+  java-client        Generate the Java code for a client to the resources in the schema
+  java-server        Generate the Java code for a server implementation  of the resources in the schema
+  swagger            Generate the swagger resource for the schema. If the outfile is an endpoint, serve it via HTTP.
+  legacy             Generate the legacy (RDL v1) JSON representation of the schema
 
-  <name>      Invoke an external generator named 'rdl-gen-<name>', searched for in your $PATH. The
-              generator is passed the -o flag if it was set, and the JSON representation of the schema
-              is written to its stdin.
+  <name>             Invoke an external generator named 'rdl-gen-<name>', searched for in your $PATH. The
+                     generator is passed the -o flag if it was set, and the JSON representation of the schema
+                     is written to its stdin.
 
 `
 	fmt.Fprintf(os.Stderr, msg)
