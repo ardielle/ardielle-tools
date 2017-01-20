@@ -34,12 +34,19 @@ func GenerateGoClient(banner string, schema *rdl.Schema, outdir string, ns strin
 	} else {
 		name = name + "_client.go"
 	}
-	out, file, _, err := outputWriter(outdir, name, ".go")
+	filepath := outdir + "/" + name
+	out, file, _, err := outputWriter(filepath, "", ".go")
 	if err != nil {
 		return err
 	}
 	if file != nil {
-		defer file.Close()
+		defer func() {
+			file.Close()
+			err := goFmt(filepath)
+			if err != nil {
+				fmt.Println("Warning: could not format go code:", err)
+			}
+		}()
 	}
 	gen := &clientGenerator{rdl.NewTypeRegistry(schema), schema, capitalize(string(schema.Name)), out, nil, banner, prefixEnums, precise, ns, librdl}
 	gen.emitClient()
