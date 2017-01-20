@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/ardielle/ardielle-go/rdl"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"unicode"
@@ -220,3 +221,7 @@ func generateUtil(schema *rdl.Schema, writer io.Writer) error {
 const utilTemplate = `
 `
 */
+
+func goFmt(filename string) error {
+	return exec.Command("go", "fmt", filename).Run()
+}

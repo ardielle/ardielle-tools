@@ -41,12 +41,19 @@ func GenerateGoModel(banner string, schema *rdl.Schema, outdir string, ns string
 	} else {
 		name = name + "_model.go"
 	}
-	out, file, _, err := outputWriter(outdir, name, ".go")
+	filepath := outdir + "/" + name
+	out, file, _, err := outputWriter(filepath, "", ".go")
 	if err != nil {
 		return err
 	}
 	if file != nil {
-		defer file.Close()
+		defer func() {
+			file.Close()
+			err := goFmt(filepath)
+			if err != nil {
+				fmt.Println("Warning: could not format go code:", err)
+			}
+		}()
 	}
 	gen := &modelGenerator{rdl.NewTypeRegistry(schema), schema, out, librdl, prefixEnums, precise, nil, untaggedUnions, ns, schema.Name == "rdl"}
 	gen.emitHeader(banner)
