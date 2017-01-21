@@ -161,6 +161,13 @@ func leftJustified(text string, width int) string {
 	return text + spaces(width-len(text))
 }
 
+func fileExists(filepath string) bool {
+	if _, err := os.Stat(filepath); os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
 func outputWriter(outdir string, name string, ext string) (*bufio.Writer, *os.File, string, error) {
 	sname := "anonymous"
 	if strings.HasSuffix(outdir, ext) {
