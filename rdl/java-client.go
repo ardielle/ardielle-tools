@@ -161,9 +161,9 @@ func (gen *javaClientGenerator) clientMethodSignature(r *rdl.Resource) string {
 	}
 	if len(r.Outputs) > 0 {
 		if sparams == "" {
-			sparams = "java.util.Map<String,java.util.List<String>> headers"
+			sparams = "java.util.Map<String, java.util.List<String>> headers"
 		} else {
-			sparams = sparams + ", java.util.Map<String,java.util.List<String>> headers"
+			sparams = sparams + ", java.util.Map<String, java.util.List<String>> headers"
 		}
 	}
 	return "public " + returnType + " " + methName + "(" + sparams + ")"
@@ -241,7 +241,7 @@ func (gen *javaClientGenerator) clientMethodBody(r *rdl.Resource) string {
 	if len(r.Outputs) > 0 {
 		s += "            if (headers != null) {\n"
 		for _, out := range r.Outputs {
-			s += "                headers.put(\"" + string(out.Name) + "\", java.util.Arrays.asList((String)response.getHeaders().getFirst(\"" + out.Header + "\")));\n"
+			s += "                headers.put(\"" + string(out.Name) + "\", java.util.Arrays.asList((String) response.getHeaders().getFirst(\"" + out.Header + "\")));\n"
 		}
 		s += "            }\n"
 	}
