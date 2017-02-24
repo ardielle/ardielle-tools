@@ -510,7 +510,7 @@ func goMethodBody(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) string {
 	case "Get", "Delete":
 		s += "\tresp, err := client.http" + method + "(" + httpArg + ")\n"
 	case "Put", "Post", "Patch":
-		bodyParam := "?"
+		bodyParam := ""
 		for _, in := range r.Inputs {
 			name := in.Name
 			if !in.PathParam && in.QueryParam == "" && in.Header == "" {
@@ -518,8 +518,12 @@ func goMethodBody(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) string {
 				break
 			}
 		}
-		s += "\tcontentBytes, err := json.Marshal(" + bodyParam + ")\n"
-		s += "\tif err != nil {\n\t\t" + errorReturn + "\n\t}\n"
+		if bodyParam == "" {
+			s += "\tvar contentBytes []byte\n"
+		} else {
+			s += "\tcontentBytes, err := json.Marshal(" + bodyParam + ")\n"
+			s += "\tif err != nil {\n\t\t" + errorReturn + "\n\t}\n"
+		}
 		s += "\tresp, err := client.http" + method + "(" + httpArg + ", contentBytes)\n"
 		assign = "="
 	case "Options":

@@ -213,7 +213,11 @@ func (gen *javaClientGenerator) clientMethodBody(r *rdl.Resource) string {
 	s += "\n"
 	switch r.Method {
 	case "PUT", "POST":
-		s += "        Response response = invocationBuilder." + strings.ToLower(r.Method) + "(javax.ws.rs.client.Entity.entity(" + entityName + ", \"application/json\"));\n"
+		if entityName == "" {
+			s += "        Response response = invocationBuilder." + strings.ToLower(r.Method) + "(javax.ws.rs.client.Entity.entity(null, \"application/json\"));\n"
+		} else {
+			s += "        Response response = invocationBuilder." + strings.ToLower(r.Method) + "(javax.ws.rs.client.Entity.entity(" + entityName + ", \"application/json\"));\n"
+		}
 	default:
 		s += "        Response response = invocationBuilder." + strings.ToLower(r.Method) + "();\n"
 	}

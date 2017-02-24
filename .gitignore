@@ -7,3 +7,5 @@ pkg/
 *.iml
 .idea
 Makefile
+bin
+linux_bin
