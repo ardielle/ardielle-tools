@@ -169,6 +169,8 @@ func javaLiteral(otype *rdl.Type, oval interface{}) string {
 		case rdl.BaseTypeFloat32, rdl.BaseTypeFloat64:
 			return fmt.Sprintf("%v", oval)
 		}
+	case rdl.TypeVariantEnumTypeDef:
+		return fmt.Sprintf("%v.%v", otype.EnumTypeDef.Name, oval)
 	}
 	return "null"
 }
