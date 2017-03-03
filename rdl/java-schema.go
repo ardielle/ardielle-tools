@@ -201,7 +201,7 @@ func javaGenerateStructTypeConstructor(reg rdl.TypeRegistry, t *rdl.StructTypeDe
 				if ft != nil {
 					ss = javaLiteral(ft, f.Default)
 				}
-				s += fmt.Sprintf("\n            .field(%q, %q, %v, %q, %s)", f.Name, ftype, false, f.Comment, ss)
+				s += fmt.Sprintf("\n            .field(%q, %q, %v, %q, %s)", f.Name, ftype, f.Optional, f.Comment, ss)
 			} else {
 				s += fmt.Sprintf("\n            .field(%q, %q, %v, %q)", f.Name, ftype, f.Optional, f.Comment)
 			}
