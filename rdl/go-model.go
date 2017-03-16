@@ -703,7 +703,7 @@ func (gen *modelGenerator) emitStruct(t *rdl.Type) {
 
 func (gen *modelGenerator) emitStructValidator(st *rdl.StructTypeDef, flattened []*rdl.StructFieldDef) {
 	gen.emit("\n//\n// Validate - checks for missing required fields, etc\n//\n")
-	gen.emit(fmt.Sprintf("func (pTypeDef *%s) Validate() error {\n", st.Name))
+	gen.emit(fmt.Sprintf("func (self *%s) Validate() error {\n", st.Name))
 	rdlPrefix := "rdl."
 	if gen.rdl {
 		rdlPrefix = ""
@@ -715,20 +715,20 @@ func (gen *modelGenerator) emitStructValidator(st *rdl.StructTypeDef, flattened 
 			bt := gen.registry.FindBaseType(f.Type)
 			switch bt {
 			case rdl.BaseTypeString, rdl.BaseTypeSymbol:
-				gen.emit(fmt.Sprintf("\tif pTypeDef.%s == \"\" {\n", fname))
+				gen.emit(fmt.Sprintf("\tif self.%s == \"\" {\n", fname))
 				gen.emit(fmt.Sprintf("\t\treturn fmt.Errorf(\"%s.%s is missing but is a required field\")\n", st.Name, f.Name))
 				if FullValidation {
 					if bt == rdl.BaseTypeString && fname != "String" {
-						gen.emit(fmt.Sprintf("\t} else {\n\t\tval := %sValidate(%sSchema(), %q, pTypeDef.%s)\n\t\tif !val.Valid {\n\t\t\treturn fmt.Errorf(\"%s.%s does not contain a valid %s (%%v)\", val.Error)\n\t\t}\n", rdlPrefix, capitalize(string(gen.schema.Name)), ftype, fname, st.Name, string(f.Name), ftype))
+						gen.emit(fmt.Sprintf("\t} else {\n\t\tval := %sValidate(%sSchema(), %q, self.%s)\n\t\tif !val.Valid {\n\t\t\treturn fmt.Errorf(\"%s.%s does not contain a valid %s (%%v)\", val.Error)\n\t\t}\n", rdlPrefix, capitalize(string(gen.schema.Name)), ftype, fname, st.Name, string(f.Name), ftype))
 					}
 				}
 				gen.emit("\t}\n")
 			case rdl.BaseTypeTimestamp:
-				gen.emit(fmt.Sprintf("\tif pTypeDef.%s.IsZero() {\n", fname))
+				gen.emit(fmt.Sprintf("\tif self.%s.IsZero() {\n", fname))
 				gen.emit(fmt.Sprintf("\t\treturn fmt.Errorf(\"%s: Missing required field: %s\")\n", st.Name, f.Name))
 				gen.emit("\t}\n")
 			case rdl.BaseTypeArray, rdl.BaseTypeMap, rdl.BaseTypeStruct, rdl.BaseTypeUUID:
-				gen.emit(fmt.Sprintf("\tif pTypeDef.%s == nil {\n", fname))
+				gen.emit(fmt.Sprintf("\tif self.%s == nil {\n", fname))
 				gen.emit(fmt.Sprintf("\t\treturn fmt.Errorf(\"%s: Missing required field: %s\")\n", st.Name, f.Name))
 				gen.emit("\t}\n")
 			}
@@ -740,7 +740,7 @@ func (gen *modelGenerator) emitStructValidator(st *rdl.StructTypeDef, flattened 
 
 func (gen *modelGenerator) emitStructInitializer(st *rdl.StructTypeDef, flattened []*rdl.StructFieldDef) {
 	gen.emit("\n//\n// Init - sets up the instance according to its default field values, if any\n//\n")
-	gen.emit(fmt.Sprintf("func (pTypeDef *%s) Init() *%s {\n", st.Name, st.Name))
+	gen.emit(fmt.Sprintf("func (self *%s) Init() *%s {\n", st.Name, st.Name))
 	for _, f := range flattened {
 		fname := capitalize(string(f.Name))
 		isRdl := false
@@ -753,22 +753,22 @@ func (gen *modelGenerator) emitStructInitializer(st *rdl.StructTypeDef, flattene
 			switch gen.registry.FindBaseType(f.Type) {
 			case rdl.BaseTypeArray:
 				ftype := goType(gen.registry, f.Type, false, f.Items, f.Keys, gen.precise, true)
-				gen.emit(fmt.Sprintf("\tif pTypeDef.%s == nil {\n", fname))
-				gen.emit(fmt.Sprintf("\t\tpTypeDef.%s = make(%s, 0)\n", fname, ftype))
+				gen.emit(fmt.Sprintf("\tif self.%s == nil {\n", fname))
+				gen.emit(fmt.Sprintf("\t\tself.%s = make(%s, 0)\n", fname, ftype))
 				gen.emit("\t}\n")
 			case rdl.BaseTypeMap:
 				ftype := goType(gen.registry, f.Type, false, f.Items, f.Keys, gen.precise, true)
-				gen.emit(fmt.Sprintf("\tif pTypeDef.%s == nil {\n", fname))
-				gen.emit(fmt.Sprintf("\t\tpTypeDef.%s = make(%s)\n", fname, ftype))
+				gen.emit(fmt.Sprintf("\tif self.%s == nil {\n", fname))
+				gen.emit(fmt.Sprintf("\t\tself.%s = make(%s)\n", fname, ftype))
 				gen.emit("\t}\n")
 			case rdl.BaseTypeStruct:
-				gen.emit(fmt.Sprintf("\tif pTypeDef.%s == nil {\n", fname))
+				gen.emit(fmt.Sprintf("\tif self.%s == nil {\n", fname))
 				if f.Type == "Struct" {
-					gen.emit(fmt.Sprintf("\t\tpTypeDef.%s = make(rdl."+ftype+")\n", fname))
+					gen.emit(fmt.Sprintf("\t\tself.%s = make(rdl."+ftype+")\n", fname))
 				} else if isRdl {
-					gen.emit(fmt.Sprintf("\t\tpTypeDef.%s = rdl.New%s()\n", fname, capitalize(ftype)))
+					gen.emit(fmt.Sprintf("\t\tself.%s = rdl.New%s()\n", fname, capitalize(ftype)))
 				} else {
-					gen.emit(fmt.Sprintf("\t\tpTypeDef.%s = New%s()\n", fname, capitalize(ftype)))
+					gen.emit(fmt.Sprintf("\t\tself.%s = New%s()\n", fname, capitalize(ftype)))
 				}
 				gen.emit("\t}\n")
 			}
@@ -802,18 +802,18 @@ func (gen *modelGenerator) emitStructInitializer(st *rdl.StructTypeDef, flattene
 			if fdef != ndef {
 				//if f.Optional && fdef == "nil" {
 				if f.Optional && pointerForOptional {
-					gen.emit(fmt.Sprintf("\tif pTypeDef.%s == nil {\n", fname))
+					gen.emit(fmt.Sprintf("\tif self.%s == nil {\n", fname))
 					gen.emit(fmt.Sprintf("\t\td := %s\n", ndef))
-					gen.emit(fmt.Sprintf("\t\tpTypeDef.%s = &d\n", fname))
+					gen.emit(fmt.Sprintf("\t\tself.%s = &d\n", fname))
 				} else {
-					gen.emit(fmt.Sprintf("\tif pTypeDef.%s == %s {\n", fname, fdef))
-					gen.emit(fmt.Sprintf("\t\tpTypeDef.%s = %s\n", fname, ndef))
+					gen.emit(fmt.Sprintf("\tif self.%s == %s {\n", fname, fdef))
+					gen.emit(fmt.Sprintf("\t\tself.%s = %s\n", fname, ndef))
 				}
 				gen.emit("\t}\n")
 			}
 		}
 	}
-	gen.emit("\treturn pTypeDef\n")
+	gen.emit("\treturn self\n")
 	gen.emit("}\n")
 }
 
@@ -821,17 +821,17 @@ func (gen *modelGenerator) emitStructUnmarshaller(st *rdl.StructTypeDef, init bo
 	name := capitalize(string(st.Name))
 	gen.emit(fmt.Sprintf("\ntype raw%s %s\n\n", name, name))
 	gen.emit(fmt.Sprintf("//\n// UnmarshalJSON is defined for proper JSON decoding of a %s\n//\n", name))
-	gen.emit(fmt.Sprintf("func (pTypeDef *%s) UnmarshalJSON(b []byte) error {\n", name))
+	gen.emit(fmt.Sprintf("func (self *%s) UnmarshalJSON(b []byte) error {\n", name))
 	gen.emit(fmt.Sprintf("\tvar r raw%s\n", name))
 	gen.emit("\terr := json.Unmarshal(b, &r)\n")
 	gen.emit("\tif err == nil {\n")
 	gen.emit(fmt.Sprintf("\t\to := %s(r)\n", name))
 	if init {
-		gen.emit(fmt.Sprintf("\t\t*pTypeDef = *((&o).Init())\n"))
+		gen.emit(fmt.Sprintf("\t\t*self = *((&o).Init())\n"))
 	} else {
-		gen.emit(fmt.Sprintf("\t\t*pTypeDef = o\n"))
+		gen.emit(fmt.Sprintf("\t\t*self = o\n"))
 	}
-	gen.emit(fmt.Sprintf("\t\terr = pTypeDef.Validate()\n"))
+	gen.emit(fmt.Sprintf("\t\terr = self.Validate()\n"))
 	gen.emit("\t}\n")
 	gen.emit("\treturn err\n")
 	gen.emit("}\n")
