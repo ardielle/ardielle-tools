@@ -29,7 +29,10 @@ type serverGenerator struct {
 // GenerateGoServer generates the server code for the RDL-defined service
 func GenerateGoServer(banner string, schema *rdl.Schema, outdir string, ns string, librdl string, prefixEnums bool, precise bool) error {
 	name := strings.ToLower(string(schema.Name))
-	if strings.HasSuffix(outdir, ".go") {
+	if outdir == "" {
+		outdir = "."
+		name = name + "_server.go"
+	} else if strings.HasSuffix(outdir, ".go") {
 		name = filepath.Base(outdir)
 		outdir = filepath.Dir(outdir)
 	} else {

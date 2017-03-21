@@ -28,7 +28,10 @@ type clientGenerator struct {
 // GenerateGoClient generates the client code to talk to the server.
 func GenerateGoClient(banner string, schema *rdl.Schema, outdir string, ns string, librdl string, prefixEnums bool, precise bool) error {
 	name := strings.ToLower(string(schema.Name))
-	if strings.HasSuffix(outdir, ".go") {
+	if outdir == "" {
+		outdir = "."
+		name = name + "_client.go"
+	} else if strings.HasSuffix(outdir, ".go") {
 		name = filepath.Base(outdir)
 		outdir = filepath.Dir(outdir)
 	} else {

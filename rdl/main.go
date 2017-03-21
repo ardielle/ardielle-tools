@@ -4,7 +4,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -98,7 +97,7 @@ func main() {
 	app.Command("import", "import the specified file and output the equivalent RDL file", func(cmd *cli.Cmd) {
 		pExtType := cmd.StringArg("TYPE", "", "the type of external schema, i.e. 'swagger'")
 		pExtFile := cmd.StringArg("FILE", "", "the external file to import, i.e. 'foo.json'")
-		pOutput := cmd.StringOpt("o", "", "Output file or directory for result. Default is stdout")
+		pOutput := cmd.StringOpt("o", ".", "Output directory for result. Default is current directory")
 		cmd.Spec = "[-o output] TYPE FILE"
 		cmd.Action = func() {
 			importSchema(*pExtType, *pExtFile, *pOutput)
@@ -115,9 +114,9 @@ func main() {
 
 	app.Command("unparse", "Regenerate RDL source for the schema JSON file", func(cmd *cli.Cmd) {
 		schemaFile := cmd.StringArg("FILE", "", "the json defining the schema")
-		cmd.Spec = "FILE"
+		pOutput := cmd.StringOpt("o", ".", "Output directory for result. Default is the current directory")
 		cmd.Action = func() {
-			unparse(*schemaFile)
+			unparse(*schemaFile, *pOutput)
 		}
 	})
 
@@ -176,7 +175,7 @@ func parse(schemaFile string, pretty bool, warning bool, strict bool) (*rdl.Sche
 	return schema, rdl.Identifier(name)
 }
 
-func unparse(schemaFile string) {
+func unparse(schemaFile string, outdir string) {
 	var err error
 	var schema *rdl.Schema
 	file := filepath.Base(schemaFile)
@@ -191,7 +190,13 @@ func unparse(schemaFile string) {
 		err = json.Unmarshal(data, &schema)
 		exitOnError(err)
 	}
-	err = rdl.UnparseRDL(schema, bufio.NewWriter(os.Stdout))
+	err = os.MkdirAll(outdir, 0755)
+	exitOnError(err)
+	fname := file
+	if schema.Name != "" {
+		fname = string(schema.Name)
+	}
+	err = rdl.UnparseRDLFile(schema, outdir+"/"+fname+".rdl")
 	exitOnError(err)
 }
 
@@ -318,7 +323,7 @@ func callSubcommand(command string, argv []string, schema *rdl.Schema) error {
 	return err
 }
 
-func importSchema(extType, extFile, output string) {
+func importSchema(extType, extFile, outdir string) {
 	cmd := "rdl-import-" + extType
 	argv := []string{extFile}
 	c := exec.Command(cmd, argv...)
@@ -338,7 +343,7 @@ func importSchema(extType, extFile, output string) {
 			fmt.Fprintf(os.Stderr, "*** Cannnot unmarshal importer result: %v\n", err)
 			fmt.Printf("%s\n", sout)
 		} else {
-			decompile(schema, output)
+			decompile(schema, outdir)
 		}
 	}
 }
@@ -364,13 +369,10 @@ func getString(obj map[string]interface{}, spath string) string {
 	return ""
 }
 
-func decompile(schema *rdl.Schema, output string) {
+func decompile(schema *rdl.Schema, outdir string) {
 	var err error
-	if output != "" {
-		err = rdl.UnparseRDLFile(schema, output)
-	} else {
-		err = rdl.UnparseRDL(schema, bufio.NewWriter(os.Stdout))
-	}
+	fname := string(schema.Name)
+	err = rdl.UnparseRDLFile(schema, outdir+"/"+fname+".rdl")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "*** %v\n", err)
 	}
