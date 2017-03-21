@@ -255,7 +255,7 @@ func generate(schemaFile string, banner string, flavor string, dirName string, l
 	case "java-client":
 		err = GenerateJavaClient(banner, schema, dirName, ns, base, externalOptions)
 	default:
-		err = generateExternally(flavor, dirName, schema, srcFile, externalOptions)
+		err = generateExternally(flavor, dirName, schema, srcFile, base, externalOptions)
 	}
 	exitOnError(err)
 }
@@ -267,7 +267,7 @@ func exitOnError(err error) {
 	}
 }
 
-func generateExternally(flavor string, dirName string, schema *rdl.Schema, srcFile string, options []string) error {
+func generateExternally(flavor string, dirName string, schema *rdl.Schema, srcFile string, base string, options []string) error {
 	cmd := "rdl-gen-" + flavor
 	var argv []string
 	if dirName != "" {
@@ -276,6 +276,10 @@ func generateExternally(flavor string, dirName string, schema *rdl.Schema, srcFi
 	}
 	argv = append(argv, "-s")
 	argv = append(argv, srcFile)
+	if base != "" {
+		argv = append(argv, "-b")
+		argv = append(argv, base)
+	}
 	for _, option := range options {
 		substrings := strings.SplitN(option, "=", 2)
 		if len(substrings[0]) > 1 {

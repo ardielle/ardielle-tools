@@ -124,26 +124,30 @@ func genSwagger(schema *rdl.Schema, basePath string) (*swagger.Doc, error) {
 	swag.Swagger = "2.0"
 	swag.Schemes = []string{}
 	//swag.Host = "localhost"
+	base := ""
 
 	title := "API"
 	if sname != "" {
 		title = "The " + sname + " API"
-		basePath += "/" + sname
+		base += "/" + sname
 	}
 	swag.Info = new(swagger.Info)
 	swag.Info.Title = title
 	if schema.Version != nil {
 		swag.Info.Version = fmt.Sprintf("%d", *schema.Version)
-		basePath += "/v" + fmt.Sprintf("%d", *schema.Version)
+		base += "/v" + fmt.Sprintf("%d", *schema.Version)
 	}
 	if schema.Base != "" {
-		basePath = schema.Base
+		base = schema.Base //schema base overrides default
 	}
-	swag.BasePath = basePath
+	if basePath != "" {
+		base = basePath //command line option base override schema base
+	}
+	swag.BasePath = base
+
 	if schema.Comment != "" {
 		swag.Info.Description = schema.Comment
 	}
-	swag.BasePath = basePath
 	if len(schema.Resources) > 0 {
 		//paths := make(map[string]map[string]*swagger.Operation)
 		paths := make(map[string]*swagger.PathItem)
