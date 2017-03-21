@@ -98,7 +98,6 @@ func main() {
 		pExtType := cmd.StringArg("TYPE", "", "the type of external schema, i.e. 'swagger'")
 		pExtFile := cmd.StringArg("FILE", "", "the external file to import, i.e. 'foo.json'")
 		pOutput := cmd.StringOpt("o", ".", "Output directory for result. Default is current directory")
-		cmd.Spec = "[-o output] TYPE FILE"
 		cmd.Action = func() {
 			importSchema(*pExtType, *pExtFile, *pOutput)
 		}
@@ -341,7 +340,6 @@ func importSchema(extType, extFile, outdir string) {
 		err = json.Unmarshal([]byte(sout), &schema)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "*** Cannnot unmarshal importer result: %v\n", err)
-			fmt.Printf("%s\n", sout)
 		} else {
 			decompile(schema, outdir)
 		}
