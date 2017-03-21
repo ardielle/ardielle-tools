@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -36,6 +37,7 @@ Commands:
   parse <schemafile.rdl>
   validate <datafile.json> <schemafile.rdl> [<typename>]
   generate [-elt] [-o <outfile>] <generator> <schema.rdl>
+  import [-o <outfile>] external_type external_file
 
 Generator Options:
   -o path         Use the directory or file as output for generation. Default is stdout.
@@ -93,11 +95,29 @@ func main() {
 		os.Exit(0)
 	})
 
+	app.Command("import", "import the specified file and output the equivalent RDL file", func(cmd *cli.Cmd) {
+		pExtType := cmd.StringArg("TYPE", "", "the type of external schema, i.e. 'swagger'")
+		pExtFile := cmd.StringArg("FILE", "", "the external file to import, i.e. 'foo.json'")
+		pOutput := cmd.StringOpt("o", "", "Output file or directory for result. Default is stdout")
+		cmd.Spec = "[-o output] TYPE FILE"
+		cmd.Action = func() {
+			importSchema(*pExtType, *pExtFile, *pOutput)
+		}
+	})
+
 	app.Command("parse", "parse the specified rdl file, to check syntax", func(cmd *cli.Cmd) {
 		schemaFile := cmd.StringArg("FILE", "", "the rdl file defining the schema")
 		cmd.Spec = "FILE"
 		cmd.Action = func() {
 			parse(*schemaFile, *pretty, *warning, *strict)
+		}
+	})
+
+	app.Command("unparse", "Regenerate RDL source for the schema JSON file", func(cmd *cli.Cmd) {
+		schemaFile := cmd.StringArg("FILE", "", "the json defining the schema")
+		cmd.Spec = "FILE"
+		cmd.Action = func() {
+			unparse(*schemaFile)
 		}
 	})
 
@@ -154,6 +174,25 @@ func parse(schemaFile string, pretty bool, warning bool, strict bool) (*rdl.Sche
 		exitOnError(err)
 	}
 	return schema, rdl.Identifier(name)
+}
+
+func unparse(schemaFile string) {
+	var err error
+	var schema *rdl.Schema
+	file := filepath.Base(schemaFile)
+	ext := filepath.Ext(file)
+	switch ext {
+	case ".rdl":
+		schema, err = rdl.ParseRDLFile(schemaFile, true, true, false)
+		exitOnError(err)
+	case ".json":
+		data, err := ioutil.ReadFile(schemaFile)
+		exitOnError(err)
+		err = json.Unmarshal(data, &schema)
+		exitOnError(err)
+	}
+	err = rdl.UnparseRDL(schema, bufio.NewWriter(os.Stdout))
+	exitOnError(err)
 }
 
 func validate(schema *rdl.Schema, filename string, typename string, pretty bool) {
@@ -273,4 +312,62 @@ func callSubcommand(command string, argv []string, schema *rdl.Schema) error {
 		fmt.Fprintf(os.Stderr, "%s", serr)
 	}
 	return err
+}
+
+func importSchema(extType, extFile, output string) {
+	cmd := "rdl-import-" + extType
+	argv := []string{extFile}
+	c := exec.Command(cmd, argv...)
+	var stdout bytes.Buffer
+	c.Stdout = &stdout
+	var stderr bytes.Buffer
+	c.Stderr = &stderr
+	err := c.Run()
+	serr := stderr.String()
+	sout := stdout.String()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", serr)
+	} else {
+		var schema *rdl.Schema
+		err = json.Unmarshal([]byte(sout), &schema)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "*** Cannnot unmarshal importer result: %v\n", err)
+			fmt.Printf("%s\n", sout)
+		} else {
+			decompile(schema, output)
+		}
+	}
+}
+
+func getString(obj map[string]interface{}, spath string) string {
+	path := strings.Split(spath, ".")
+	if len(path) > 1 {
+		for _, key := range path[:len(path)-1] {
+			if o, ok := obj[key]; ok {
+				if v, ok := o.(map[string]interface{}); ok {
+					obj = v
+					continue
+				}
+			}
+			return ""
+		}
+	}
+	if o, ok := obj[path[len(path)-1]]; ok {
+		if s, ok := o.(string); ok {
+			return s
+		}
+	}
+	return ""
+}
+
+func decompile(schema *rdl.Schema, output string) {
+	var err error
+	if output != "" {
+		err = rdl.UnparseRDLFile(schema, output)
+	} else {
+		err = rdl.UnparseRDL(schema, bufio.NewWriter(os.Stdout))
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "*** %v\n", err)
+	}
 }

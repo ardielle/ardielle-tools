@@ -12,18 +12,20 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/ardielle/ardielle-go/rdl"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/ardielle/ardielle-go/rdl"
+	"github.com/ardielle/ardielle-tools/rdl-plugins/swagger"
 )
 
 func main() {
 	pOutdir := flag.String("o", ".", "Output directory")
 	flag.String("s", "", "RDL source file")
-	basePath := flag.String("b", "/api", "Base path")
+	basePath := flag.String("b", "", "Base path")
 	flag.Parse()
 	data, err := ioutil.ReadAll(os.Stdin)
 	if err == nil {
@@ -68,7 +70,7 @@ func outputWriter(outdir string, name string, ext string) (*bufio.Writer, *os.Fi
 //   and serves it up on the specified server endpoint is provided, or outputs to stdout otherwise.
 func ExportToSwagger(schema *rdl.Schema, outdir string, basePath string) error {
 	sname := string(schema.Name)
-	swaggerData, err := swagger(schema, basePath)
+	swaggerData, err := genSwagger(schema, basePath)
 	if err != nil {
 		return err
 	}
@@ -115,54 +117,94 @@ func ExportToSwagger(schema *rdl.Schema, outdir string, basePath string) error {
 	return http.ListenAndServe(outdir, nil)
 }
 
-func swagger(schema *rdl.Schema, basePath string) (*SwaggerDoc, error) {
+func genSwagger(schema *rdl.Schema, basePath string) (*swagger.Doc, error) {
 	reg := rdl.NewTypeRegistry(schema)
 	sname := string(schema.Name)
-	swag := new(SwaggerDoc)
+	swag := new(swagger.Doc)
 	swag.Swagger = "2.0"
 	swag.Schemes = []string{}
 	//swag.Host = "localhost"
-	swag.BasePath = basePath
 
 	title := "API"
 	if sname != "" {
 		title = "The " + sname + " API"
-		swag.BasePath += "/" + sname
+		basePath += "/" + sname
 	}
-	swag.Info = new(SwaggerInfo)
+	swag.Info = new(swagger.Info)
 	swag.Info.Title = title
 	if schema.Version != nil {
 		swag.Info.Version = fmt.Sprintf("%d", *schema.Version)
-		swag.BasePath += "/v" + fmt.Sprintf("%d", *schema.Version)
+		basePath += "/v" + fmt.Sprintf("%d", *schema.Version)
 	}
+	if schema.Base != "" {
+		basePath = schema.Base
+	}
+	swag.BasePath = basePath
 	if schema.Comment != "" {
 		swag.Info.Description = schema.Comment
 	}
+	swag.BasePath = basePath
 	if len(schema.Resources) > 0 {
-		paths := make(map[string]map[string]*SwaggerAction)
+		//paths := make(map[string]map[string]*swagger.Operation)
+		paths := make(map[string]*swagger.PathItem)
 		for _, r := range schema.Resources {
 			path := r.Path
 			actions, ok := paths[path]
 			if !ok {
-				actions = make(map[string]*SwaggerAction)
+				actions = new(swagger.PathItem)
 				paths[path] = actions
 			}
 			meth := strings.ToLower(r.Method)
-			action, ok := actions[meth]
-			if !ok {
-				action = new(SwaggerAction)
+			var action *swagger.Operation
+			switch meth {
+			case "get":
+				action = actions.Get
+				if action == nil {
+					action = swagger.NewOperation()
+					actions.Get = action
+				}
+			case "put":
+				action = actions.Put
+				if action == nil {
+					action = swagger.NewOperation()
+					actions.Put = action
+				}
+			case "post":
+				action = actions.Post
+				if action == nil {
+					action = swagger.NewOperation()
+					actions.Post = action
+				}
+			case "delete":
+				action = actions.Delete
+				if action == nil {
+					action = swagger.NewOperation()
+					actions.Delete = action
+				}
+			case "options":
+				action = actions.Options
+				if action == nil {
+					action = swagger.NewOperation()
+					actions.Options = action
+				}
+			case "patch":
+				action = actions.Patch
+				if action == nil {
+					action = swagger.NewOperation()
+					actions.Patch = action
+				}
 			}
 			action.Summary = r.Comment
 			tag := string(r.Type)       //fixme: RDL has no tags, the type is actually too fine grain for this
 			action.Tags = []string{tag} //multiple tags include the resource in multiple sections
 			action.Produces = []string{"application/json"}
-			var ins []*SwaggerParameter
+			var ins []*swagger.Parameter
 			if len(r.Inputs) > 0 {
 				if r.Method == "POST" || r.Method == "PUT" {
 					action.Consumes = []string{"application/json"}
 				}
 				for _, in := range r.Inputs {
-					param := new(SwaggerParameter)
+					param := new(swagger.Parameter)
 					param.Name = string(in.Name)
 					param.Description = in.Comment
 					required := true
@@ -194,7 +236,7 @@ func swagger(schema *rdl.Schema, basePath string) (*SwaggerDoc, error) {
 				}
 				action.Parameters = ins
 			}
-			responses := make(map[string]*SwaggerResponse)
+			responses := make(map[string]*swagger.Response)
 			expected := r.Expected
 			addSwaggerResponse(responses, string(r.Type), expected, "")
 			if len(r.Alternatives) > 0 {
@@ -213,15 +255,26 @@ func swagger(schema *rdl.Schema, basePath string) (*SwaggerDoc, error) {
 			//security -> r.auth
 			//r.outputs?
 			//action.description?
-			//action.operationId IGNORE
-
-			actions[meth] = action
-			paths[path] = actions
+			action.OperationID = strings.ToLower(r.Method) + string(r.Type)
+			switch meth {
+			case "get":
+				actions.Get = action
+			case "put":
+				actions.Put = action
+			case "post":
+				actions.Post = action
+			case "delete":
+				actions.Delete = action
+			case "options":
+				actions.Options = action
+			case "patch":
+				actions.Patch = action
+			}
 		}
 		swag.Paths = paths
 	}
 	if len(schema.Types) > 0 {
-		defs := make(map[string]*SwaggerType)
+		defs := make(map[string]swagger.Type)
 		for _, t := range schema.Types {
 			ref := makeSwaggerTypeDef(reg, t)
 			if ref != nil {
@@ -230,20 +283,20 @@ func swagger(schema *rdl.Schema, basePath string) (*SwaggerDoc, error) {
 			}
 		}
 		if true {
-			props := make(map[string]*SwaggerType)
-			codeType := new(SwaggerType)
+			props := make(map[string]swagger.Type)
+			codeType := make(swagger.Type)
 			t := "integer"
-			codeType.Type = t
+			codeType["type"] = t
 			f := "int32"
-			codeType.Format = f
+			codeType["format"] = f
 			props["code"] = codeType
-			msgType := new(SwaggerType)
+			msgType := make(swagger.Type)
 			t2 := "string"
-			msgType.Type = t2
+			msgType["type"] = t2
 			props["message"] = msgType
-			prop := new(SwaggerType)
-			prop.Required = []string{"code", "message"}
-			prop.Properties = props
+			prop := make(swagger.Type)
+			prop["required"] = []string{"code", "message"}
+			prop["properties"] = props
 			defs["ResourceError"] = prop
 		}
 		swag.Definitions = defs
@@ -251,25 +304,25 @@ func swagger(schema *rdl.Schema, basePath string) (*SwaggerDoc, error) {
 	return swag, nil
 }
 
-func addSwaggerResponse(responses map[string]*SwaggerResponse, errType string, sym string, errComment string) {
+func addSwaggerResponse(responses map[string]*swagger.Response, errType string, sym string, errComment string) {
 	code := rdl.StatusCode(sym)
-	var schema *SwaggerType
+	var schema swagger.Type
 	if sym != "NO_CONTENT" {
-		schema = new(SwaggerType)
-		schema.Ref = "#/definitions/" + errType
+		schema = make(swagger.Type)
+		schema["$ref"] = "#/definitions/" + errType
 	}
 	description := rdl.StatusMessage(sym)
 	if errComment != "" {
 		description += " - " + errComment
 	}
-	responses[code] = &SwaggerResponse{description, schema}
+	responses[code] = &swagger.Response{description, schema}
 }
 
-func makeSwaggerTypeRef(reg rdl.TypeRegistry, itemTypeName rdl.TypeRef) (string, string, *SwaggerType) {
+func makeSwaggerTypeRef(reg rdl.TypeRegistry, itemTypeName rdl.TypeRef) (string, string, swagger.Type) {
 	itype := string(itemTypeName)
 	switch reg.FindBaseType(itemTypeName) {
 	case rdl.BaseTypeInt8:
-		return "string", "byte", nil
+		return "string", "byte", nil //?
 	case rdl.BaseTypeInt16, rdl.BaseTypeInt32, rdl.BaseTypeInt64:
 		return "integer", strings.ToLower(itype), nil
 	case rdl.BaseTypeFloat32:
@@ -283,20 +336,20 @@ func makeSwaggerTypeRef(reg rdl.TypeRegistry, itemTypeName rdl.TypeRef) (string,
 	case rdl.BaseTypeUUID, rdl.BaseTypeSymbol:
 		return "string", strings.ToLower(itype), nil
 	default:
-		s := new(SwaggerType)
-		s.Ref = "#/definitions/" + itype
+		s := make(swagger.Type)
+		s["$ref"] = "#/definitions/" + itype
 		return "", "", s
 	}
 }
 
-func makeSwaggerTypeDef(reg rdl.TypeRegistry, t *rdl.Type) *SwaggerType {
-	st := new(SwaggerType)
+func makeSwaggerTypeDef(reg rdl.TypeRegistry, t *rdl.Type) swagger.Type {
+	st := make(swagger.Type)
 	bt := reg.BaseType(t)
 	switch t.Variant {
 	case rdl.TypeVariantStructTypeDef:
 		typedef := t.StructTypeDef
-		st.Description = typedef.Comment
-		props := make(map[string]*SwaggerType)
+		st["description"] = typedef.Comment
+		props := make(map[string]swagger.Type)
 		var required []string
 		if len(typedef.Fields) > 0 {
 			for _, f := range typedef.Fields {
@@ -305,76 +358,92 @@ func makeSwaggerTypeDef(reg rdl.TypeRegistry, t *rdl.Type) *SwaggerType {
 				}
 				ft := reg.FindType(f.Type)
 				fbt := reg.BaseType(ft)
-				prop := new(SwaggerType)
-				prop.Description = f.Comment
+				prop := make(swagger.Type)
+				prop["description"] = f.Comment
 				switch fbt {
 				case rdl.BaseTypeArray:
-					prop.Type = "array"
+					prop["type"] = "array"
 					if ft.Variant == rdl.TypeVariantArrayTypeDef && f.Items == "" {
 						f.Items = ft.ArrayTypeDef.Items
 					}
 					if f.Items != "" {
 						fitems := string(f.Items)
-						items := new(SwaggerType)
+						items := make(swagger.Type)
 						switch fitems {
 						case "String":
-							items.Type = strings.ToLower(fitems)
+							items["type"] = strings.ToLower(fitems)
 						case "Int32", "Int64", "Int16":
-							items.Type = "integer"
-							items.Format = strings.ToLower(fitems)
+							items["type"] = "integer"
+							items["format"] = strings.ToLower(fitems)
 						default:
-							items.Ref = "#/definitions/" + fitems
+							items["$ref"] = "#/definitions/" + fitems
 						}
-						prop.Items = items
+						prop["items"] = items
 					}
 				case rdl.BaseTypeString:
-					prop.Type = strings.ToLower(fbt.String())
+					prop["type"] = strings.ToLower(fbt.String())
 				case rdl.BaseTypeInt32, rdl.BaseTypeInt64, rdl.BaseTypeInt16:
-					prop.Type = "integer"
-					prop.Format = strings.ToLower(fbt.String())
+					prop["type"] = "integer"
+					prop["format"] = strings.ToLower(fbt.String())
 				case rdl.BaseTypeStruct:
-					prop.Ref = "#/definitions/" + string(f.Type)
+					prop["$ref"] = "#/definitions/" + string(f.Type)
 				case rdl.BaseTypeMap:
-					prop.Type = "object"
+					prop["type"] = "object"
 					if f.Items != "" {
 						fitems := string(f.Items)
-						items := new(SwaggerType)
+						items := make(swagger.Type)
 						switch f.Items {
 						case "String":
-							items.Type = strings.ToLower(fitems)
+							items["type"] = strings.ToLower(fitems)
 						case "Int32", "Int64", "Int16":
-							items.Type = "integer"
-							items.Format = strings.ToLower(fitems)
+							items["type"] = "integer"
+							items["format"] = strings.ToLower(fitems)
 						default:
-							items.Ref = "#/definitions/" + fitems
+							items["$ref"] = "#/definitions/" + fitems
 						}
-						prop.AdditionalProperties = items
+						prop["additionalProperties"] = items
 					}
 				default:
-					prop.Type = "_" + string(f.Type) + "_" //!
+					prop["type"] = "_" + string(f.Type) + "_" //!
 				}
 				props[string(f.Name)] = prop
 			}
 		}
-		st.Properties = props
+		st["properties"] = props
 		if len(required) > 0 {
-			st.Required = required
+			st["required"] = required
+		}
+	case rdl.TypeVariantMapTypeDef:
+		typedef := t.MapTypeDef
+		st["type"] = "object"
+		if typedef.Items != "Any" {
+			items := make(swagger.Type)
+			switch reg.FindBaseType(typedef.Items) {
+			case rdl.BaseTypeString:
+				items["type"] = strings.ToLower(string(typedef.Items))
+			case rdl.BaseTypeInt32, rdl.BaseTypeInt64, rdl.BaseTypeInt16:
+				items["type"] = "integer"
+				items["format"] = strings.ToLower(string(typedef.Items))
+			default:
+				items["$ref"] = "#/definitions/" + string(typedef.Items)
+			}
+			st["additionalProperties"] = items
 		}
 	case rdl.TypeVariantArrayTypeDef:
 		typedef := t.ArrayTypeDef
-		st.Type = bt.String()
+		st["type"] = bt.String()
 		if typedef.Items != "Any" {
-			items := new(SwaggerType)
+			items := make(swagger.Type)
 			switch reg.FindBaseType(typedef.Items) {
 			case rdl.BaseTypeString:
-				items.Type = strings.ToLower(string(typedef.Items))
+				items["type"] = strings.ToLower(string(typedef.Items))
 			case rdl.BaseTypeInt32, rdl.BaseTypeInt64, rdl.BaseTypeInt16:
-				items.Type = "integer"
-				items.Format = strings.ToLower(string(typedef.Items))
+				items["type"] = "integer"
+				items["format"] = strings.ToLower(string(typedef.Items))
 			default:
-				items.Ref = "#/definitions/" + string(typedef.Items)
+				items["$ref"] = "#/definitions/" + string(typedef.Items)
 			}
-			st.Items = items
+			st["items"] = items
 		}
 	case rdl.TypeVariantEnumTypeDef:
 		typedef := t.EnumTypeDef
@@ -382,7 +451,7 @@ func makeSwaggerTypeDef(reg rdl.TypeRegistry, t *rdl.Type) *SwaggerType {
 		for _, el := range typedef.Elements {
 			tmp = append(tmp, string(el.Symbol))
 		}
-		st.Enum = tmp
+		st["enum"] = tmp
 	case rdl.TypeVariantUnionTypeDef:
 		typedef := t.UnionTypeDef
 		fmt.Println("[" + typedef.Name + ": Swagger doesn't support unions]")
@@ -396,136 +465,3 @@ func makeSwaggerTypeDef(reg rdl.TypeRegistry, t *rdl.Type) *SwaggerType {
 	}
 	return st
 }
-
-// SwaggerDoc is a representation of the top level object in swagger 2.0
-type SwaggerDoc struct {
-	Swagger string       `json:"swagger"`
-	Info    *SwaggerInfo `json:"info"`
-	//Host        string                               `json:"host"`
-	BasePath    string                               `json:"basePath"`
-	Schemes     []string                             `json:"schemes"`
-	Paths       map[string]map[string]*SwaggerAction `json:"paths,omitempty"`
-	Security    *map[string][]string                 `json:"security,omitempty"`
-	Definitions map[string]*SwaggerType              `json:"definitions,omitempty"`
-}
-
-// SwaggerInfo -
-type SwaggerInfo struct {
-	Title          string          `json:"title"`
-	Version        string          `json:"version"`
-	Description    string          `json:"description,omitempty"`
-	TermsOfService string          `json:"termsOfService,omitempty"`
-	Contact        *SwaggerContact `json:"contact,omitempty"`
-	License        *SwaggerLicense `json:"license,omitempty"`
-}
-
-// SwaggerContact -
-type SwaggerContact struct {
-	Name  string `json:"name,omitempty"`
-	URL   string `json:"url,omitempty"`
-	Email string `json:"email,omitempty"`
-}
-
-// SwaggerLicense -
-type SwaggerLicense struct {
-	Name string `json:"name"`
-	URL  string `json:"url,omitempty"`
-}
-
-// SwaggerAction -
-type SwaggerAction struct {
-	Tags        []string                    `json:"tags,omitempty"`
-	Summary     string                      `json:"summary,omitempty"`
-	Description string                      `json:"description,omitempty"`
-	OperationID string                      `json:"operationId,omitempty"`
-	Consumes    []string                    `json:"consumes,omitempty"`
-	Produces    []string                    `json:"produces,omitempty"`
-	Parameters  []*SwaggerParameter         `json:"parameters,omitempty"`
-	Responses   map[string]*SwaggerResponse `json:"responses,omitempty"`
-	Security    map[string][]string         `json:"security,omitempty"`
-}
-
-// SwaggerParameter -
-type SwaggerParameter struct {
-	Name             string       `json:"name"`
-	In               string       `json:"in"`
-	Schema           *SwaggerType `json:"schema,omitempty"`
-	Type             string       `json:"type,omitempty"`
-	Format           string       `json:"format,omitempty"`
-	Items            *SwaggerType `json:"items,omitempty"`
-	Description      string       `json:"description,omitempty"`
-	Required         bool         `json:"required"`
-	CollectionFormat string       `json:"collectionFormat,omitempty"`
-}
-
-// SwaggerResponse -
-type SwaggerResponse struct {
-	Description string       `json:"description,omitempty"`
-	Schema      *SwaggerType `json:"schema,omitempty"`
-}
-
-// SwaggerType -
-type SwaggerType struct {
-	Properties           map[string]*SwaggerType `json:"properties,omitempty"`
-	Required             []string                `json:"required,omitempty"`
-	Type                 string                  `json:"type,omitempty"`
-	Format               string                  `json:"format,omitempty"`
-	Pattern              string                  `json:"pattern,omitempty"`
-	Description          string                  `json:"description,omitempty"`
-	Items                *SwaggerType            `json:"items,omitempty"`
-	Ref                  string                  `json:"$ref,omitempty"`
-	Enum                 []string                `json:"enum,omitempty"`
-	AdditionalProperties *SwaggerType            `json:"additionalProperties,omitempty"`
-}
-
-/*
- * Swagger 1.4
-
-type SwaggerResource struct {
-	ApiVersion     string  `json:"apiVersion"`
-	SwaggerVersion string `json:"swaggerVersion"`
-	BasePath       string `json:"basePath"`
-	ResourcePath   string `json:"resourcePath"`
-	Produces       []string `json:"produces,omitempty"`
-	Apis           []SwaggerApi
-}
-
-type SwaggerApi struct {
-	Path string `json:"path"`
-	Operations []SwaggerOperation `json:"operations"`
-}
-
-type SwaggerOperation struct {
-	Method string `json:"method"`
-	Summary string `json:"summary"`
-	Notes string `json:"notes"`
-	Type string `json:"type"`
-	Nickname string `json:"nickname"`
-	Authorizations SwaggerAuthorization `json:"authorizations,omitempty"`
-	Parameters []SwaggerParameter `json:"parameters,omitempty"`
-	ResponseMessages []SwaggerResponseMessage `json:"responseMessages,omitempty"`
-}
-
-type SwaggerParameter struct {
-	Name string `json:"name"`
-	Description *string `json:"description,omitempty"`
-	Required bool `json:"required"`
-	Type string `json:"type"`
-	ParamType string `json:"paramType"`
-	AllowMultiple bool `json:"allowMultiple"`
-}
-
-type SwaggerResponseMessage struct {
-	Code int32 `json:"code"`
-	Message string `json:"message"`
-}
-
-type SwaggerAuthorization struct {
-	Oauth2 []SwaggerOauth2 `json:"oauth2,omitempty"`
-}
-
-type SwaggerOauth2 struct {
-	Scope string `json:"scope"`
-	Description *string `json:"description,omitempty"`
-}
-*/

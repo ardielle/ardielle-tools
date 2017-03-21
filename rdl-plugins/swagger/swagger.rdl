@@ -1,0 +1,117 @@
+//the swagger schema spec, expressed in RDL
+name swagger
+
+type Contact Struct {
+     String name (optional);
+     String url (optional);
+     String email (optional);
+}
+
+type License Struct {
+     String name (optional);
+     String url (optional);
+}
+
+type Info Struct {
+	String title;
+	String version (optional);
+	String description (optional);
+    String termsOfService (optional);
+    Contact contact (optional);
+    License license (optional);
+}
+/*
+type BasicType String (values=["string","number","integer","boolean","array","file"]);
+
+type Property Struct {
+	BasicType type;
+	Float64 minimum (optional);
+	Float64 maximum (optional);
+}
+
+type Definition Struct {
+	Map<String,Property> properties; //a map of property name to property defn
+	Array<String> required; //a list of required properties
+	String description (optional);
+}
+
+type TypeRef Struct {
+	String ref (x_json_name="$ref");
+}
+*/
+
+type Type Map<String,Any>;
+
+/*
+type xType Struct {
+    Map<String,Type> properties (optional);
+    Array<String> required (optional);
+    String type (optional);
+    String format (optional);
+    String pattern (optional);
+    String description (optional);
+    Type items (optional);
+	String ref (optional, x_json_name="$ref");
+    Array<String> enum (optional);
+    Type additionalProperties (optional);
+    Any default (optional);
+    Any example (optional);
+    Int32 minItems (optional);
+}
+*/
+
+type Parameter Struct {
+	String name;
+	String in; //"query", "header", "path", "formData", "body"
+    Type schema (optional);
+	String type (optional);
+    String format (optional);
+    String collectionFormat (default="csv");
+	Bool required (default=false); //must be true for path params
+    String description (optional);
+}
+
+type Response Struct {
+	String description;
+	Type schema;
+}
+
+type Operation Struct {
+	Array<String> tags (optional);
+	String summary (optional);
+	String operationID (optional, x_json_name="operationId");
+	Array<String> consumes (optional);
+	Array<String> produces (optional);
+	Array<Parameter> parameters (optional);
+	Map<String,Response> responses;
+}
+
+type PathItem Struct {
+	String ref (optional, x_json_name="$ref");
+    Operation get (optional);
+    Operation put (optional);
+    Operation post (optional);
+    Operation delete (optional);
+    Operation options (optional);
+    Operation head (optional);
+    Operation patch (optional);
+    //parameter (optional); //this is a union, it seems?
+    //extended item "x-*", but the type is inprecise
+}
+
+type SecurityDef Struct {
+     String in;
+     String name;
+     String type;
+}
+
+type Doc Struct {
+	String swagger; //always "2.0" for now
+	Info info;
+	String basePath;
+    String host (optional);
+	Array<String> schemes (optional);
+	Map<String,PathItem> paths;
+	Map<String,Type> definitions;
+    Map<String,SecurityDef> securityDefinitions (optional);
+}
