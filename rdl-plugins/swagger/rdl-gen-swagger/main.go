@@ -315,7 +315,7 @@ func addSwaggerResponse(responses map[string]*swagger.Response, errType string, 
 	if errComment != "" {
 		description += " - " + errComment
 	}
-	responses[code] = &swagger.Response{description, schema}
+	responses[code] = &swagger.Response{Description: description, Schema: schema}
 }
 
 func makeSwaggerTypeRef(reg rdl.TypeRegistry, itemTypeName rdl.TypeRef) (string, string, swagger.Type) {
