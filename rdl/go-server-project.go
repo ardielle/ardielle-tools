@@ -74,35 +74,35 @@ func GenerateGoServerProject(rdlSrcPath string, banner string, schema *rdl.Schem
 }
 
 func GenerateGoDaemonGenerate(banner string, schema *rdl.Schema, outdir string, ns string) error {
-	filepath := outdir + "/generate.go"
-	if fileExists(filepath) {
-		return nil
-	}
-	out, file, _, err := outputWriter(filepath, "", ".go")
-	if err != nil {
-		return err
-	}
-	if file != nil {
-		defer func() {
-			file.Close()
-			err := goFmt(filepath)
-			if err != nil {
-				fmt.Println("Warning: could not format go code:", err, filepath)
-			}
-		}()
-	}
 	/*
-	      funcMap := template.FuncMap{
-	   		"header":      func() string { return generationHeader(banner) },
-	   		"package":     func() string { return generationPackage(schema, "") },
-	   	}
-	   	t := template.Must(template.New("FOO").Funcs(funcMap).Parse(serverGenerateTemplate))
-	   	err = t.Execute(out, schema)
-	   	if err != nil {
-	   		fmt.Println("whoops:", err)
-	   		return err
-	   	}
-	   	out.Flush()
+		filepath := outdir + "/generate.go"
+		if fileExists(filepath) {
+			return nil
+		}
+		out, file, _, err := outputWriter(filepath, "", ".go")
+		if err != nil {
+			return err
+		}
+		if file != nil {
+			defer func() {
+				file.Close()
+				err := goFmt(filepath)
+				if err != nil {
+					fmt.Println("Warning: could not format go code:", err, filepath)
+				}
+			}()
+		}
+		      funcMap := template.FuncMap{
+		   		"header":      func() string { return generationHeader(banner) },
+		   		"package":     func() string { return generationPackage(schema, "") },
+		   	}
+		   	t := template.Must(template.New("FOO").Funcs(funcMap).Parse(serverGenerateTemplate))
+		   	err = t.Execute(out, schema)
+		   	if err != nil {
+		   		fmt.Println("whoops:", err)
+		   		return err
+		   	}
+		   	out.Flush()
 	*/
 	return nil
 }
