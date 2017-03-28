@@ -43,7 +43,7 @@ func GenerateGoServerProject(rdlSrcPath string, banner string, schema *rdl.Schem
 	if err != nil {
 		return err
 	}
-	implpath := filepath.Join(gendir, name + ".go")
+	implpath := filepath.Join(gendir, name+".go")
 	if !fileExists(implpath) {
 		err = GenerateGoDaemonImpl(banner, schema, gendir, ns, librdl, prefixEnums, preciseTypes, untaggedUnions)
 		if err != nil {
@@ -91,17 +91,19 @@ func GenerateGoDaemonGenerate(banner string, schema *rdl.Schema, outdir string, 
 			}
 		}()
 	}
-   funcMap := template.FuncMap{
-		"header":      func() string { return generationHeader(banner) },
-		"package":     func() string { return generationPackage(schema, "") },
-	}
-	t := template.Must(template.New("FOO").Funcs(funcMap).Parse(serverGenerateTemplate))
-	err = t.Execute(out, schema)
-	if err != nil {
-		fmt.Println("whoops:", err)
-		return err
-	}
-	out.Flush()
+	/*
+	      funcMap := template.FuncMap{
+	   		"header":      func() string { return generationHeader(banner) },
+	   		"package":     func() string { return generationPackage(schema, "") },
+	   	}
+	   	t := template.Must(template.New("FOO").Funcs(funcMap).Parse(serverGenerateTemplate))
+	   	err = t.Execute(out, schema)
+	   	if err != nil {
+	   		fmt.Println("whoops:", err)
+	   		return err
+	   	}
+	   	out.Flush()
+	*/
 	return nil
 }
 
