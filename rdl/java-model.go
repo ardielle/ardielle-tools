@@ -11,14 +11,24 @@ import (
 )
 
 type javaModelGenerator struct {
-	registry   rdl.TypeRegistry
-	schema     *rdl.Schema
-	name       string
-	writer     *bufio.Writer
-	err        error
-	ns         string
-	jackson    bool
-	getSetters bool
+	registry             rdl.TypeRegistry
+	schema               *rdl.Schema
+	name                 string
+	writer               *bufio.Writer
+	err                  error
+	ns                   string
+	jackson              bool
+	jacksonJsonInclusion string
+	getSetters           bool
+}
+
+func getJacksonJsonInclusion(options []string) string {
+	val := javaGenerationStringOptionSet(options, "jacksonjsoninclusion")
+	// valid values are: ALWAYS, NON_NULL, NON_DEFAULT, NON_EMPTY, DEFAULT_INCLUSION
+	if !(val == "ALWAYS" || val == "NON_NULL" || val == "NON_DEFAULT" || val == "NON_EMPTY" || val == "DEFAULT_INCLUSION") {
+		val = "NON_DEFAULT"
+	}
+	return val
 }
 
 // GenerateJavaModel generates the model code for the types defined in the RDL schema.
@@ -28,13 +38,14 @@ func GenerateJavaModel(banner string, schema *rdl.Schema, outdir string, ns stri
 		return err
 	}
 	getSetters := javaGenerationBoolOptionSet(options, "getsetters")
+	jacksonJsonInclusion := getJacksonJsonInclusion(options)
 	registry := rdl.NewTypeRegistry(schema)
 	for _, t := range schema.Types {
 		tName, _, _ := rdl.TypeInfo(t)
 		if strings.HasPrefix(string(tName), "rdl.") {
 			continue
 		}
-		err := generateJavaType(banner, schema, registry, packageDir, t, ns, getSetters)
+		err := generateJavaType(banner, schema, registry, packageDir, t, ns, getSetters, jacksonJsonInclusion)
 		if err != nil {
 			return err
 		}
@@ -53,7 +64,7 @@ func GenerateJavaModel(banner string, schema *rdl.Schema, outdir string, ns stri
 	return nil
 }
 
-func generateJavaType(banner string, schema *rdl.Schema, registry rdl.TypeRegistry, outdir string, t *rdl.Type, ns string, getSetters bool) error {
+func generateJavaType(banner string, schema *rdl.Schema, registry rdl.TypeRegistry, outdir string, t *rdl.Type, ns string, getSetters bool, jacksonJsonInclusion string) error {
 	tName, _, _ := rdl.TypeInfo(t)
 	bt := registry.BaseType(t)
 	switch bt {
@@ -71,7 +82,7 @@ func generateJavaType(banner string, schema *rdl.Schema, registry rdl.TypeRegist
 	if file != nil {
 		defer file.Close()
 	}
-	gen := &javaModelGenerator{registry, schema, string(tName), out, nil, ns, true, getSetters}
+	gen := &javaModelGenerator{registry, schema, string(tName), out, nil, ns, true, jacksonJsonInclusion, getSetters}
 	gen.emitHeader(banner, ns, bt, t)
 	switch bt {
 	case rdl.BaseTypeStruct:
@@ -600,7 +611,7 @@ func javaFieldName(n rdl.Identifier) string {
 
 func (gen *javaModelGenerator) emitStructFields(fields []*rdl.StructFieldDef, name rdl.TypeName, comment string, cName string, bfinal bool) {
 	if gen.jackson {
-		gen.emit("@JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)\n")
+		gen.emit(fmt.Sprintf("@JsonSerialize(include = JsonSerialize.Inclusion.%s)\n", gen.jacksonJsonInclusion))
 	}
 	sfinal := ""
 	if bfinal {
