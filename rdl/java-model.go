@@ -134,7 +134,7 @@ func (gen *javaModelGenerator) structHasFieldDefault(t *rdl.StructTypeDef) bool 
 	return false
 }
 
-func (gen *javaModelGenerator) addIndirectImports(t *rdl.Type, types map[string]int) {
+func (gen *javaModelGenerator) addIndirectImports(t *rdl.Type, bt rdl.BaseType, types map[string]int) {
 	switch t.Variant {
 	case rdl.TypeVariantStructTypeDef:
 		fields := flattenedFields(gen.registry, t)
@@ -144,19 +144,35 @@ func (gen *javaModelGenerator) addIndirectImports(t *rdl.Type, types map[string]
 			} else if f.Type == "Array" {
 				types["java.util.List"] = 1
 			}
+			if gen.jackson && f.Optional {
+				types["com.fasterxml.jackson.annotation.JsonInclude"] = 1
+			}
 		}
+	}
+	if gen.jackson && bt == rdl.BaseTypeUnion {
+		types["java.io.IOException"] = 1
+		types["com.fasterxml.jackson.databind.JsonDeserializer"] = 1
+		types["com.fasterxml.jackson.databind.annotation.JsonDeserialize"] = 1
+		types["com.fasterxml.jackson.core.JsonParser"] = 1
+		types["com.fasterxml.jackson.core.JsonToken"] = 1
+		types["com.fasterxml.jackson.databind.DeserializationContext"] = 1
+		types["com.fasterxml.jackson.core.JsonProcessingException"] = 1
+		types["com.fasterxml.jackson.databind.ObjectMapper"] = 1
+		types["com.fasterxml.jackson.databind.node.ObjectNode"] = 1
+		types["com.fasterxml.jackson.annotation.JsonInclude"] = 1
 	}
 }
 
-func (gen *javaModelGenerator) indirectImports(t *rdl.Type) string {
+func (gen *javaModelGenerator) indirectImports(t *rdl.Type, bt rdl.BaseType) string {
 	s := ""
 	types := make(map[string]int)
-	gen.addIndirectImports(t, types)
+	gen.addIndirectImports(t, bt, types)
 	for k, _ := range types {
 		s += "import " + k + ";\n"
 	}
 	return s
 }
+
 func (gen *javaModelGenerator) emitHeader(banner string, ns string, bt rdl.BaseType, t *rdl.Type) {
 	gen.emit(javaGenerationHeader(banner))
 	gen.emit("\n\n")
@@ -164,28 +180,12 @@ func (gen *javaModelGenerator) emitHeader(banner string, ns string, bt rdl.BaseT
 	if pack != "" {
 		gen.emit("package " + javaGenerationPackage(gen.schema, gen.ns) + ";\n")
 	}
-	simports := gen.indirectImports(t)
+	simports := gen.indirectImports(t, bt)
 	if simports != "" {
 		gen.emit(simports)
 	}
 	if ns != "com.yahoo.rdl" {
 		gen.emit("import com.yahoo.rdl.*;\n")
-	}
-	if gen.jackson {
-		if bt == rdl.BaseTypeUnion {
-			gen.emit("import java.io.IOException;\n")
-			gen.emit("import com.fasterxml.jackson.databind.JsonDeserializer;\n")
-			gen.emit("import com.fasterxml.jackson.databind.annotation.JsonDeserialize;\n")
-			gen.emit("import com.fasterxml.jackson.core.JsonParser;\n")
-			gen.emit("import com.fasterxml.jackson.core.JsonToken;\n")
-			gen.emit("import com.fasterxml.jackson.databind.DeserializationContext;\n")
-			gen.emit("import com.fasterxml.jackson.core.JsonProcessingException;\n")
-			gen.emit("import com.fasterxml.jackson.databind.ObjectMapper;\n")
-			gen.emit("import com.fasterxml.jackson.databind.node.ObjectNode;\n")
-		}
-		if bt != rdl.BaseTypeEnum {
-			gen.emit("import com.fasterxml.jackson.databind.annotation.JsonSerialize;\n")
-		}
 	}
 }
 
@@ -302,7 +302,7 @@ func (gen *javaModelGenerator) emitUnion(t *rdl.Type) {
 			tName := ut.Name
 			uName := capitalize(string(tName))
 			if gen.jackson {
-				gen.emit("@JsonSerialize(include = JsonSerialize.Inclusion.NON_NULL)\n")
+				gen.emit("@JsonInclude(JsonInclude.Include.NON_NULL)\n")
 				gen.emit(fmt.Sprintf("@JsonDeserialize(using = %s.%sJsonDeserializer.class)\n", uName, uName))
 			}
 			gen.emit(fmt.Sprintf("public final class %s {\n", uName))
@@ -599,9 +599,6 @@ func javaFieldName(n rdl.Identifier) string {
 }
 
 func (gen *javaModelGenerator) emitStructFields(fields []*rdl.StructFieldDef, name rdl.TypeName, comment string, cName string, bfinal bool) {
-	if gen.jackson {
-		gen.emit("@JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)\n")
-	}
 	sfinal := ""
 	if bfinal {
 		sfinal = "final "
@@ -621,6 +618,9 @@ func (gen *javaModelGenerator) emitStructFields(fields []*rdl.StructFieldDef, na
 			}
 			if optional {
 				gen.emit("    @RdlOptional\n")
+				if gen.jackson {
+					gen.emit("    @JsonInclude(JsonInclude.Include.NON_EMPTY)\n")
+				}
 			}
 			gen.emit(fmt.Sprintf("    public %s %s;\n", ftype, fname))
 		}
