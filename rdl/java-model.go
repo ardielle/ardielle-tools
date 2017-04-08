@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/ardielle/ardielle-go/rdl"
+	"sort"
 	"strings"
 )
 
@@ -134,7 +135,8 @@ func (gen *javaModelGenerator) structHasFieldDefault(t *rdl.StructTypeDef) bool 
 	return false
 }
 
-func (gen *javaModelGenerator) addIndirectImports(t *rdl.Type, bt rdl.BaseType, types map[string]int) {
+func (gen *javaModelGenerator) addIndirectImports(t *rdl.Type, bt rdl.BaseType) []string {
+	types := make(map[string]int)
 	switch t.Variant {
 	case rdl.TypeVariantStructTypeDef:
 		fields := flattenedFields(gen.registry, t)
@@ -161,13 +163,18 @@ func (gen *javaModelGenerator) addIndirectImports(t *rdl.Type, bt rdl.BaseType, 
 		types["com.fasterxml.jackson.databind.node.ObjectNode"] = 1
 		types["com.fasterxml.jackson.annotation.JsonInclude"] = 1
 	}
+	var imports []string
+	for imp, _ := range types {
+		imports = append(imports, imp)
+	}
+	sort.Strings(imports)
+	return imports
 }
 
 func (gen *javaModelGenerator) indirectImports(t *rdl.Type, bt rdl.BaseType) string {
 	s := ""
-	types := make(map[string]int)
-	gen.addIndirectImports(t, bt, types)
-	for k, _ := range types {
+	types := gen.addIndirectImports(t, bt)
+	for _, k := range types {
 		s += "import " + k + ";\n"
 	}
 	return s
