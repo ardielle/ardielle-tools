@@ -874,7 +874,7 @@ func (gen *javaServerGenerator) handlerSignature(r *rdl.Resource) string {
 	}
 	spec := "@Produces(MediaType.APPLICATION_JSON)\n"
 	switch r.Method {
-	case "POST", "PUT":
+	case "POST", "PUT", "PATCH":
 		spec += "    @Consumes(MediaType.APPLICATION_JSON)\n"
 	}
 
