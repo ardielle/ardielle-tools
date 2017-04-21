@@ -872,14 +872,19 @@ func (gen *javaServerGenerator) handlerSignature(r *rdl.Resource) string {
 		ptype := javaType(reg, v.Type, true, "", "")
 		params = append(params, pdecl+ptype+" "+javaName(k))
 	}
-	spec := "@Produces(MediaType.APPLICATION_JSON)\n"
+	// include @Produces json annotation for all methods except OPTIONS
+	var spec string
 	switch r.Method {
+	case "OPTIONS":
 	case "POST", "PUT", "PATCH":
-		spec += "    @Consumes(MediaType.APPLICATION_JSON)\n"
+		spec += "@Consumes(MediaType.APPLICATION_JSON)\n    "
+		fallthrough
+	default:
+		spec += "@Produces(MediaType.APPLICATION_JSON)\n    "
 	}
 
 	methName, _ := javaMethodName(reg, r)
-	return spec + "    public " + returnType + " " + methName + "(" + strings.Join(params, ", ") + ")"
+	return spec + "public " + returnType + " " + methName + "(" + strings.Join(params, ", ") + ")"
 }
 
 func defaultValueAnnotation(val interface{}) string {
