@@ -33,7 +33,15 @@ type modelGenerator struct {
 }
 
 // GenerateGoModel generates the model code for the types defined in the RDL schema.
-func GenerateGoModel(banner string, schema *rdl.Schema, outdir string, ns string, librdl string, prefixEnums bool, precise bool, untaggedUnions []string) error {
+func GenerateGoModel(opts *generateOptions) error {
+	schema := opts.schema
+	outdir := opts.dirName
+	banner := opts.banner
+	ns := opts.ns
+	untaggedUnions := opts.untaggedUnions
+	librdl := opts.librdl
+	prefixEnums := opts.prefixEnums
+	precise := opts.preciseTypes
 	name := strings.ToLower(string(schema.Name))
 	if outdir == "" {
 		outdir = "."

@@ -146,7 +146,19 @@ func main() {
 			if schema.Name == "" {
 				schema.Name = name
 			}
-			generate(*schemaFile, banner, *generator, *outfile, *librdl, *prefixEnums, *preciseTypes, *ns, schema, *schemaFile, *untaggedUnions, *basePath, *externalOptions)
+			opts := &generateOptions{
+				schema:          schema,
+				banner:          banner,
+				dirName:         *outfile,
+				librdl:          *librdl,
+				prefixEnums:     *prefixEnums,
+				preciseTypes:    *preciseTypes,
+				ns:              *ns,
+				untaggedUnions:  *untaggedUnions,
+				base:            *basePath,
+				externalOptions: *externalOptions,
+			}
+			generate(*generator, *schemaFile, opts)
 		}
 	})
 	app.Run(os.Args)
@@ -239,27 +251,41 @@ func ensureExtension(name string, ext string) string {
 	return name + ext
 }
 
-func generate(schemaFile string, banner string, flavor string, dirName string, librdl string, prefixEnums bool, preciseTypes bool, ns string, schema *rdl.Schema, srcFile string, untaggedUnions []string, base string, externalOptions []string) {
+type generateOptions struct {
+	schemaFile      string
+	banner          string
+	dirName         string
+	librdl          string
+	prefixEnums     bool
+	preciseTypes    bool
+	ns              string
+	schema          *rdl.Schema
+	untaggedUnions  []string
+	base            string
+	externalOptions []string
+}
+
+func generate(flavor string, srcFile string, opts *generateOptions) {
 	var err error
 	switch flavor {
 	case "json":
-		err = rdl.ExportToJSON(schema, dirName)
+		err = rdl.ExportToJSON(opts.schema, opts.dirName)
 	case "go-model":
-		err = GenerateGoModel(banner, schema, dirName, ns, librdl, prefixEnums, preciseTypes, untaggedUnions)
+		err = GenerateGoModel(opts)
 	case "go-server":
-		err = GenerateGoServer(banner, schema, dirName, ns, librdl, prefixEnums, preciseTypes)
+		err = GenerateGoServer(opts)
 	case "go-client":
-		err = GenerateGoClient(banner, schema, dirName, ns, librdl, prefixEnums, preciseTypes)
+		err = GenerateGoClient(opts)
 	case "go-server-project":
-		err = GenerateGoServerProject(schemaFile, banner, schema, dirName, ns, librdl, prefixEnums, preciseTypes, untaggedUnions)
+		err = GenerateGoServerProject(opts)
 	case "java-model":
-		err = GenerateJavaModel(banner, schema, dirName, ns, externalOptions)
+		err = GenerateJavaModel(opts.banner, opts.schema, opts.dirName, opts.ns, opts.externalOptions)
 	case "java-server":
-		err = GenerateJavaServer(banner, schema, dirName, ns, base, externalOptions)
+		err = GenerateJavaServer(opts.banner, opts.schema, opts.dirName, opts.ns, opts.base, opts.externalOptions)
 	case "java-client":
-		err = GenerateJavaClient(banner, schema, dirName, ns, base, externalOptions)
+		err = GenerateJavaClient(opts.banner, opts.schema, opts.dirName, opts.ns, opts.base, opts.externalOptions)
 	default:
-		err = generateExternally(flavor, dirName, schema, srcFile, base, externalOptions)
+		err = generateExternally(flavor, opts.dirName, opts.schema, srcFile, opts.base, opts.externalOptions)
 	}
 	exitOnError(err)
 }

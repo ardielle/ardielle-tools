@@ -27,7 +27,14 @@ type serverGenerator struct {
 }
 
 // GenerateGoServer generates the server code for the RDL-defined service
-func GenerateGoServer(banner string, schema *rdl.Schema, outdir string, ns string, librdl string, prefixEnums bool, precise bool) error {
+func GenerateGoServer(opts *generateOptions) error {
+	banner := opts.banner
+	schema := opts.schema
+	outdir := opts.dirName
+	ns := opts.ns
+	librdl := opts.librdl
+	prefixEnums := opts.prefixEnums
+	precise := opts.preciseTypes
 	name := strings.ToLower(string(schema.Name))
 	if outdir == "" {
 		outdir = "."
