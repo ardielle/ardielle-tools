@@ -239,7 +239,7 @@ func groupResources(resources []*rdl.Resource) map[string][]*rdl.Resource {
 
 func formatType(out io.Writer, registry rdl.TypeRegistry, typeDef *rdl.Type) {
 	tName, _, tComment := rdl.TypeInfo(typeDef)
-	fmt.Fprintf(out, "\n### %s\n", tName)
+	fmt.Fprintf(out, "\n### <a name=%q></a> %s\n", tName, tName)
 	if tComment != "" {
 		fmt.Fprintf(out, "%s", formatBlock(tComment, 0, 80, ""))
 	}
