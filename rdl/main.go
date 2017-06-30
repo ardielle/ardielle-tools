@@ -139,6 +139,7 @@ func main() {
 		ns := cmd.StringOpt("ns", "", "Namespace for the code generation (default = schema namespace)")
 		basePath := cmd.StringOpt("b", "", "Specify the base path of the URL for java server and client generators (default = schema name, snake-cased)")
 		externalOptions := cmd.StringsOpt("x", []string{}, "Set options for external generator, e.g. -x e=true -xfoo=bar will send -e true --foo bar to external generator")
+		requestResponse := cmd.BoolOpt("with-request-response", false, "Enable request/response objects")
 		generator := cmd.StringArg("GENERATOR", "", "the generator to use")
 		schemaFile := cmd.StringArg("FILE", "", "the rdl file defining the schema")
 		cmd.Action = func() {
@@ -151,6 +152,7 @@ func main() {
 				banner:          banner,
 				dirName:         *outfile,
 				librdl:          *librdl,
+				requestResponse: *requestResponse,
 				prefixEnums:     *prefixEnums,
 				preciseTypes:    *preciseTypes,
 				ns:              *ns,
@@ -254,6 +256,7 @@ func ensureExtension(name string, ext string) string {
 type generateOptions struct {
 	schemaFile      string
 	banner          string
+	requestResponse bool
 	dirName         string
 	librdl          string
 	prefixEnums     bool

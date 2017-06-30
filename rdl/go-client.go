@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/ardielle/ardielle-go/rdl"
+	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -59,10 +60,39 @@ func GenerateGoClient(opts *generateOptions) error {
 			}
 		}()
 	}
-	gen := &clientGenerator{rdl.NewTypeRegistry(schema), schema, capitalize(string(schema.Name)), out, nil, banner, prefixEnums, precise, ns, librdl}
-	gen.emitClient()
-	out.Flush()
-	return gen.err
+	if opts.requestResponse {
+		gen := &reqRepClientGenerator{
+			registry:    rdl.NewTypeRegistry(schema),
+			schema:      schema,
+			name:        capitalize(string(schema.Name)),
+			writer:      out,
+			banner:      banner,
+			prefixEnums: prefixEnums,
+			precise:     precise,
+			ns:          ns,
+			librdl:      librdl,
+		}
+		if err := gen.emitClient(); err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: generating client code: %v\n", err)
+		}
+		out.Flush()
+		return gen.err
+	} else {
+		gen := &clientGenerator{
+			registry:    rdl.NewTypeRegistry(schema),
+			schema:      schema,
+			name:        capitalize(string(schema.Name)),
+			writer:      out,
+			banner:      banner,
+			prefixEnums: prefixEnums,
+			precise:     precise,
+			ns:          ns,
+			librdl:      librdl,
+		}
+		gen.emitClient()
+		out.Flush()
+		return gen.err
+	}
 }
 
 const clientTemplate = `{{header}}

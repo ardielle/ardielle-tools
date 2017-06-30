@@ -922,7 +922,7 @@ func (gen *javaServerGenerator) handlerReturnType(r *rdl.Resource, methName stri
 func (gen *javaServerGenerator) serverMethodSignature(r *rdl.Resource) string {
 	reg := gen.registry
 	returnType := javaType(reg, r.Type, false, "", "")
-	//noContent := r.Expected == "NO_CONTENT" && r.Alternatives == nil
+	//noContent := m.Expected == "NO_CONTENT" && m.Alternatives == nil
 	//FIX: if nocontent, return nothing, have a void result, and don't "@Produces" anything
 	methName, params := javaMethodName(reg, r)
 	sparams := ""
