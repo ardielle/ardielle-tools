@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/ardielle/ardielle-go/rdl"
+	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -26,7 +27,15 @@ type clientGenerator struct {
 }
 
 // GenerateGoClient generates the client code to talk to the server.
-func GenerateGoClient(banner string, schema *rdl.Schema, outdir string, ns string, librdl string, prefixEnums bool, precise bool) error {
+func GenerateGoClient(opts *generateOptions) error {
+
+	banner := opts.banner
+	schema := opts.schema
+	outdir := opts.dirName
+	ns := opts.ns
+	librdl := opts.librdl
+	prefixEnums := opts.prefixEnums
+	precise := opts.preciseTypes
 	name := strings.ToLower(string(schema.Name))
 	if outdir == "" {
 		outdir = "."
@@ -51,10 +60,39 @@ func GenerateGoClient(banner string, schema *rdl.Schema, outdir string, ns strin
 			}
 		}()
 	}
-	gen := &clientGenerator{rdl.NewTypeRegistry(schema), schema, capitalize(string(schema.Name)), out, nil, banner, prefixEnums, precise, ns, librdl}
-	gen.emitClient()
-	out.Flush()
-	return gen.err
+	if opts.requestResponse {
+		gen := &reqRepClientGenerator{
+			registry:    rdl.NewTypeRegistry(schema),
+			schema:      schema,
+			name:        capitalize(string(schema.Name)),
+			writer:      out,
+			banner:      banner,
+			prefixEnums: prefixEnums,
+			precise:     precise,
+			ns:          ns,
+			librdl:      librdl,
+		}
+		if err := gen.emitClient(); err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: generating client code: %v\n", err)
+		}
+		out.Flush()
+		return gen.err
+	} else {
+		gen := &clientGenerator{
+			registry:    rdl.NewTypeRegistry(schema),
+			schema:      schema,
+			name:        capitalize(string(schema.Name)),
+			writer:      out,
+			banner:      banner,
+			prefixEnums: prefixEnums,
+			precise:     precise,
+			ns:          ns,
+			librdl:      librdl,
+		}
+		gen.emitClient()
+		out.Flush()
+		return gen.err
+	}
 }
 
 const clientTemplate = `{{header}}

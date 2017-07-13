@@ -33,7 +33,15 @@ type modelGenerator struct {
 }
 
 // GenerateGoModel generates the model code for the types defined in the RDL schema.
-func GenerateGoModel(banner string, schema *rdl.Schema, outdir string, ns string, librdl string, prefixEnums bool, precise bool, untaggedUnions []string) error {
+func GenerateGoModel(opts *generateOptions) error {
+	schema := opts.schema
+	outdir := opts.dirName
+	banner := opts.banner
+	ns := opts.ns
+	untaggedUnions := opts.untaggedUnions
+	librdl := opts.librdl
+	prefixEnums := opts.prefixEnums
+	precise := opts.preciseTypes
 	name := strings.ToLower(string(schema.Name))
 	if outdir == "" {
 		outdir = "."
@@ -825,10 +833,10 @@ func (gen *modelGenerator) emitStructUnmarshaller(st *rdl.StructTypeDef, init bo
 	gen.emit(fmt.Sprintf("\ntype raw%s %s\n\n", name, name))
 	gen.emit(fmt.Sprintf("//\n// UnmarshalJSON is defined for proper JSON decoding of a %s\n//\n", name))
 	gen.emit(fmt.Sprintf("func (self *%s) UnmarshalJSON(b []byte) error {\n", name))
-	gen.emit(fmt.Sprintf("\tvar r raw%s\n", name))
-	gen.emit("\terr := json.Unmarshal(b, &r)\n")
+	gen.emit(fmt.Sprintf("\tvar m raw%s\n", name))
+	gen.emit("\terr := json.Unmarshal(b, &m)\n")
 	gen.emit("\tif err == nil {\n")
-	gen.emit(fmt.Sprintf("\t\to := %s(r)\n", name))
+	gen.emit(fmt.Sprintf("\t\to := %s(m)\n", name))
 	if init {
 		gen.emit(fmt.Sprintf("\t\t*self = *((&o).Init())\n"))
 	} else {

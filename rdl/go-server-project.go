@@ -10,8 +10,9 @@ import (
 	"github.com/ardielle/ardielle-go/rdl"
 )
 
-func GenerateGoServerProject(rdlSrcPath string, banner string, schema *rdl.Schema, outdir string, ns string, librdl string, prefixEnums bool, preciseTypes bool, untaggedUnions []string) error {
-
+func GenerateGoServerProject(opts *generateOptions) error {
+	outdir := opts.dirName
+	schema := opts.schema
 	//1. establish directory structure
 	if strings.HasSuffix(outdir, ".go") {
 		return fmt.Errorf("Output must be a directory: %q", outdir)
@@ -27,25 +28,25 @@ func GenerateGoServerProject(rdlSrcPath string, banner string, schema *rdl.Schem
 	if err != nil {
 		return err
 	}
-	err = GenerateGoModel(banner, schema, gendir, "", librdl, prefixEnums, preciseTypes, untaggedUnions)
+	err = GenerateGoModel(opts)
 	if err != nil {
 		return err
 	}
-	err = GenerateGoServer(banner, schema, gendir, "", librdl, prefixEnums, preciseTypes)
+	err = GenerateGoServer(opts)
 	if err != nil {
 		return err
 	}
-	err = GenerateGoClient(banner, schema, gendir, "", librdl, prefixEnums, preciseTypes)
+	err = GenerateGoClient(opts)
 	if err != nil {
 		return err
 	}
-	err = GenerateGoDaemonGenerate(banner, schema, gendir, "")
+	err = GenerateGoDaemonGenerate(opts.banner, schema, gendir, "")
 	if err != nil {
 		return err
 	}
 	implpath := filepath.Join(gendir, name+".go")
 	if !fileExists(implpath) {
-		err = GenerateGoDaemonImpl(banner, schema, gendir, ns, librdl, prefixEnums, preciseTypes, untaggedUnions)
+		err = GenerateGoDaemonImpl(opts.banner, schema, gendir, opts.ns, opts.librdl, opts.prefixEnums, opts.preciseTypes, opts.untaggedUnions)
 		if err != nil {
 			return err
 		}
@@ -57,7 +58,7 @@ func GenerateGoServerProject(rdlSrcPath string, banner string, schema *rdl.Schem
 	if err != nil {
 		return err
 	}
-	err = GenerateGoDaemonMain(banner, schema, daemondir, ns, librdl, prefixEnums, preciseTypes, untaggedUnions)
+	err = GenerateGoDaemonMain(opts.banner, schema, daemondir, opts.ns, opts.librdl, opts.prefixEnums, opts.preciseTypes, opts.untaggedUnions)
 	if err != nil {
 		return err
 	}
@@ -66,7 +67,7 @@ func GenerateGoServerProject(rdlSrcPath string, banner string, schema *rdl.Schem
 	if err != nil {
 		return err
 	}
-	err = GenerateGoCLIMain(banner, schema, clidir, ns, librdl, prefixEnums, preciseTypes, untaggedUnions)
+	err = GenerateGoCLIMain(opts.banner, schema, clidir, opts.ns, opts.librdl, opts.prefixEnums, opts.preciseTypes, opts.untaggedUnions)
 	if err != nil {
 		return err
 	}

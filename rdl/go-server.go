@@ -27,7 +27,14 @@ type serverGenerator struct {
 }
 
 // GenerateGoServer generates the server code for the RDL-defined service
-func GenerateGoServer(banner string, schema *rdl.Schema, outdir string, ns string, librdl string, prefixEnums bool, precise bool) error {
+func GenerateGoServer(opts *generateOptions) error {
+	banner := opts.banner
+	schema := opts.schema
+	outdir := opts.dirName
+	ns := opts.ns
+	librdl := opts.librdl
+	prefixEnums := opts.prefixEnums
+	precise := opts.preciseTypes
 	name := strings.ToLower(string(schema.Name))
 	if outdir == "" {
 		outdir = "."
@@ -95,10 +102,10 @@ func Init(impl {{cName}}Handler, baseURL string, authz rdl.Authorizer, authns ..
 	router := httptreemux.New()
 	adaptor := {{name}}Adaptor{impl, authz, authns, b}
 {{range .Resources}}
-	router.{{uMethod .}}(b+"{{methodPath .}}", func(w http.ResponseWriter, r *http.Request, ps map[string]string) {
-		adaptor.{{handlerName .}}(w, r, ps)
+	router.{{uMethod .}}(b+"{{methodPath .}}", func(w http.ResponseWriter, m *http.Request, ps map[string]string) {
+		adaptor.{{handlerName .}}(w, m, ps)
 	}){{end}}
-	router.NotFoundHandler = func(w http.ResponseWriter, r *http.Request) {
+	router.NotFoundHandler = func(w http.ResponseWriter, m *http.Request) {
 		rdl.JSONResponse(w, 404, rdl.ResourceError{Code: http.StatusNotFound, Message: "Not Found"})
 	}
 	log.Printf("Initialized {{name}} service at '%s'\n", baseURL)
