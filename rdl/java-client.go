@@ -135,6 +135,7 @@ public class {{cName}}Client {
 
     public {{cName}}Client setProperty(String name, Object value) {
         client = client.property(name, value);
+        base = client.target(base.getUri().toString());
         return this;
     }
 
