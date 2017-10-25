@@ -129,6 +129,11 @@ public class {{cName}}Client {
         base = client.target(url);
     }
 
+    public {{cName}}Client(String url, Client rsClient) {
+        client = rsClient;
+        base = client.target(url);
+    }
+    
     public void close() {
         client.close();
     }
