@@ -202,7 +202,8 @@ func (gen *javaClientGenerator) clientMethodBody(r *rdl.Resource) string {
 	if r.Auth != nil {
 		if r.Auth.Authenticate || (r.Auth.Action != "" && r.Auth.Resource != "") {
 			s += "\n        if (credsHeader != null) {"
-			s += "\n            invocationBuilder = invocationBuilder.header(credsHeader, credsToken);"
+			s += "\n            invocationBuilder = credsHeader.startsWith(\"Cookie.\") ? invocationBuilder.cookie(credsHeader.substring(7),"
+			s += "\n                credsToken) : invocationBuilder.header(credsHeader, credsToken);"
 			s += "\n        }"
 		} else {
 			log.Println("*** Badly formed auth spec in resource input:", r)
