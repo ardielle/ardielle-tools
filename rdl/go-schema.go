@@ -6,10 +6,11 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/ardielle/ardielle-go/rdl"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/ardielle/ardielle-go/rdl"
 )
 
 type schemaGenerator struct {
@@ -57,6 +58,8 @@ func GenerateGoSchema(banner string, schema *rdl.Schema, outdir string, ns strin
 	gen.emit("\n\npackage " + generationPackage(gen.schema, gen.ns) + "\n\n")
 	if gen.schema.Name != "rdl" {
 		gen.emit("import (\n")
+		gen.emit("\t\"log\"\n")
+		gen.emit("\n")
 		gen.emit("\trdl \"" + librdl + "\"\n")
 		gen.emit(")\n\n")
 	}
@@ -82,7 +85,11 @@ func GenerateGoSchema(banner string, schema *rdl.Schema, outdir string, ns strin
 			gen.emitResource(r)
 		}
 	}
-	gen.emit("\tschema = sb.Build()\n")
+	gen.emit("\tvar err error\n")
+	gen.emit("\tschema, err = sb.BuildParanoid()\n")
+	gen.emit("\tif err != nil {\n")
+	gen.emit("\t  log.Fatalf(\"rdl: schema build failed: %s\", err)")
+	gen.emit("\t}\n")
 	gen.emit("}\n\n")
 	gen.emit(fmt.Sprintf("func %sSchema() *%sSchema {\n", capitalize(string(schema.Name)), rdlprefix))
 	gen.emit("\treturn schema\n")
