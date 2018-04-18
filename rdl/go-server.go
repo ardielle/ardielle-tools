@@ -6,11 +6,12 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/ardielle/ardielle-go/rdl"
 	"log"
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/ardielle/ardielle-go/rdl"
 )
 
 type serverGenerator struct {
@@ -91,10 +92,7 @@ var _ = ioutil.Discard
 // implementation ({{cName}}Handler), and returns an http.Handler to serve it.
 //
 func Init(impl {{cName}}Handler, baseURL string, authz rdl.Authorizer, authns ...rdl.Authenticator) http.Handler {
-	for strings.HasSuffix(baseURL, "/") {
-		baseURL = baseURL[0 : len(baseURL)-1]
-	}
-	u, err := url.Parse(baseURL)
+	u, err := url.Parse(strings.TrimSuffix(baseURL, "/"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -102,10 +100,10 @@ func Init(impl {{cName}}Handler, baseURL string, authz rdl.Authorizer, authns ..
 	router := httptreemux.New()
 	adaptor := {{name}}Adaptor{impl, authz, authns, b}
 {{range .Resources}}
-	router.{{uMethod .}}(b+"{{methodPath .}}", func(w http.ResponseWriter, m *http.Request, ps map[string]string) {
-		adaptor.{{handlerName .}}(w, m, ps)
+	router.{{uMethod .}}(b+"{{methodPath .}}", func(w http.ResponseWriter, r *http.Request, ps map[string]string) {
+		adaptor.{{handlerName .}}(w, r, ps)
 	}){{end}}
-	router.NotFoundHandler = func(w http.ResponseWriter, m *http.Request) {
+	router.NotFoundHandler = func(w http.ResponseWriter, r *http.Request) {
 		rdl.JSONResponse(w, 404, rdl.ResourceError{Code: http.StatusNotFound, Message: "Not Found"})
 	}
 	log.Printf("Initialized {{name}} service at '%s'\n", baseURL)
@@ -371,14 +369,9 @@ func goHandlerBody(reg rdl.TypeRegistry, name string, r *rdl.Resource, precise b
 			fargs = append(fargs, name)
 		} else {
 			bodyName = name
-			s += "\tbody, oserr := ioutil.ReadAll(request.Body)\n"
-			s += "\tif oserr != nil {\n"
-			s += "\t\trdl.JSONResponse(writer, http.StatusBadRequest, rdl.ResourceError{Code: http.StatusBadRequest, Message: \"Bad request: \" + oserr.Error()})\n"
-			s += "\t\treturn\n"
-			s += "\t}\n"
 			pgtype := goType(reg, in.Type, false, "", "", precise, true)
 			s += "\tvar " + bodyName + " " + pgtype + "\n"
-			s += "\toserr = json.Unmarshal(body, &" + bodyName + ")\n"
+			s += "\toserr := json.NewDecoder(request.Body).Decode(&" + bodyName + ")\n"
 			s += "\tif oserr != nil {\n"
 			s += "\t\trdl.JSONResponse(writer, http.StatusBadRequest, rdl.ResourceError{Code: http.StatusBadRequest, Message: \"Bad request: \" + oserr.Error()})\n"
 			s += "\t\treturn\n"

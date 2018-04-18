@@ -6,11 +6,12 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/ardielle/ardielle-go/rdl"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/ardielle/ardielle-go/rdl"
 )
 
 type clientGenerator struct {
@@ -586,9 +587,7 @@ func goMethodBody(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) string {
 		}
 	}
 	s += "\tif err != nil {\n\t\t" + errorReturn + "\n\t}\n"
-	s += "\tcontentBytes, err " + assign + " ioutil.ReadAll(resp.Body)\n"
-	s += "\tresp.Body.Close()\n"
-	s += "\tif err != nil {\n\t\t" + errorReturn + "\n\t}\n"
+	s += "\tdefer resp.Body.Close()\n"
 	s += "\tswitch resp.StatusCode {\n"
 	//loop for all expected results
 	var expected []string
@@ -618,12 +617,12 @@ func goMethodBody(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) string {
 				tmp += "304 != resp.StatusCode"
 			}
 			s += "\t\tif " + tmp + " {\n"
-			s += "\t\t\terr = json.Unmarshal(contentBytes, &data)\n"
+			s += "\t\t\terr = json.NewDecoder(resp.Body).Decode(&data)\n"
 			s += "\t\t\tif err != nil {\n\t\t\t\t" + errorReturn + "\n\t\t\t}\n"
 			s += "\t\t}\n"
 		}
 	} else {
-		s += "\t\terr = json.Unmarshal(contentBytes, &data)\n"
+		s += "\t\terr = json.NewDecoder(resp.Body).Decode(&data)\n"
 		s += "\t\tif err != nil {\n\t\t\t" + errorReturn + "\n\t\t}\n"
 	}
 	//here, define the output headers
@@ -641,7 +640,10 @@ func goMethodBody(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) string {
 	//end loop
 	s += "\tdefault:\n"
 	s += "\t\tvar errobj rdl.ResourceError\n"
-	s += "\t\tjson.Unmarshal(contentBytes, &errobj)\n"
+	s += "\t\tcontentBytes, err " + assign + " ioutil.ReadAll(resp.Body)\n"
+	s += "\t\tif err != nil {\n\t\t\t" + errorReturn + "\n\t\t}\n"
+	s += "\t\terr = json.Unmarshal(contentBytes, &errobj)\n"
+	s += "\t\tif err != nil {\n\t\t\t" + errorReturn + "\n\t\t}\n"
 	s += "\t\tif errobj.Code == 0 {\n"
 	s += "\t\t\terrobj.Code = resp.StatusCode\n"
 	s += "\t\t}\n"

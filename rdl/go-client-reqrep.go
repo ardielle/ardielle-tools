@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/ardielle/ardielle-go/rdl"
 	"go/format"
 	"strings"
 	"text/template"
+
+	"github.com/ardielle/ardielle-go/rdl"
 )
 
 type reqRepClientGenerator struct {
@@ -322,16 +323,15 @@ func (client {{client}}) {{.Signature}} {
    if err != nil {
        return nil, err
    }
-   outputBytes, err := ioutil.ReadAll(resp.Body)
-   resp.Body.Close()
-   if err != nil {
-      return nil, err
-   }
+   defer resp.Body.Close()
    switch resp.StatusCode {
    {{.ResponseCases}}
    default:
       var errobj rdl.ResourceError
-      json.Unmarshal(outputBytes, &errobj)
+	  err = json.NewDecoder(resp.Body).Decode(&errobj)
+	  if err != nil {
+		  return nil, err
+	  }
 	   if errobj.Code == 0 {
 	      errobj.Code = resp.StatusCode
 	   }
@@ -514,7 +514,7 @@ func (m *reqRepMethod) ResponseCases() (string, error) {
 			// no body
 		default:
 			// decode body
-			s.Println("if err := json.Unmarshal(outputBytes, &response.Body); err != nil {")
+			s.Println("if err := json.NewDecoder(resp.Body).Decode(&response.Body); err != nil {")
 			s.Println("   return nil, err")
 			s.Println("}")
 		}
