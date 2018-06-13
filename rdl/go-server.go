@@ -343,6 +343,8 @@ func goHandlerBody(reg rdl.TypeRegistry, name string, r *rdl.Resource, precise b
 				} else {
 					s += fmt.Sprintf("\t%s := floatFromString(context.Params[%q])\n", name, in.Name)
 				}
+			case "UUID":
+				s += fmt.Sprintf("\t%s := rdl.Parse%s(context.Params[%q])\n", name, in.Type, in.Name)
 			default:
 				if precise && strings.ToLower(string(in.Type)) != "string" {
 					s += fmt.Sprintf("\t%s := %s(context.Params[%q])\n", name, in.Type, in.Name)
