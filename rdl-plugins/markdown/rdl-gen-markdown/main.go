@@ -206,7 +206,7 @@ func ExportToMarkdown(schema *rdl.Schema, outdir string) error {
 		for _, entry := range groups {
 			group := entry.name
 			lstRez := entry.resources
-			fmt.Fprintf(out, "\n### [%s](#%s)\n", group, group)
+			fmt.Fprintf(out, "\n### [%s](#TypeDef_%s)\n", group, group)
 			//too much? formatType(out, schema, schema.FindType(group))
 			for _, rez := range lstRez {
 				//ideally, sort by method here to be consistent
@@ -251,7 +251,7 @@ func groupResources(resources []*rdl.Resource) []*entry {
 
 func formatType(out io.Writer, registry rdl.TypeRegistry, typeDef *rdl.Type) {
 	tName, _, tComment := rdl.TypeInfo(typeDef)
-	fmt.Fprintf(out, "\n### <a name=%q>%s</a>\n", tName, tName)
+	fmt.Fprintf(out, "\n### <a name=\"TypeDef_%s\">%s</a>\n", tName, tName)
 	if tComment != "" {
 		fmt.Fprintf(out, "%s", formatBlock(tComment, 0, 80, ""))
 	}
@@ -304,7 +304,7 @@ func annotate(registry rdl.TypeRegistry, typename rdl.TypeRef) string {
 	if t != nil {
 		tName, tType, _ := rdl.TypeInfo(t)
 		if tType != rdl.TypeRef(tName) {
-			return "[" + string(typename) + "](#" + string(typename) + ")"
+			return "[" + string(typename) + "](#TypeDef_" + string(typename) + ")"
 		}
 	}
 	return string(typename)
@@ -345,7 +345,7 @@ func formatStructType(out io.Writer, registry rdl.TypeRegistry, types []*rdl.Typ
 				}
 				ff := ""
 				if t != topType {
-					ff = "[from [" + string(t.Name) + "](#" + string(t.Name) + ")]"
+					ff = "[from [" + string(t.Name) + "](#TypeDef_" + string(t.Name) + ")]"
 				}
 				row := []string{string(fn), ft, fo, fc, ff}
 				rows = append(rows, row)
