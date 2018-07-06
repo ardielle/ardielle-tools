@@ -203,7 +203,9 @@ func ExportToMarkdown(schema *rdl.Schema, outdir string) error {
 	if schema.Resources != nil {
 		fmt.Fprintf(out, "\n## Resources\n")
 		groups := groupResources(schema.Resources)
-		for group, lstRez := range groups {
+		for _, entry := range groups {
+			group := entry.name
+			lstRez := entry.resources
 			fmt.Fprintf(out, "\n### [%s](#%s)\n", group, group)
 			//too much? formatType(out, schema, schema.FindType(group))
 			for _, rez := range lstRez {
@@ -223,8 +225,14 @@ func ExportToMarkdown(schema *rdl.Schema, outdir string) error {
 	return nil
 }
 
-func groupResources(resources []*rdl.Resource) map[string][]*rdl.Resource {
+type entry struct {
+	name string
+	resources []*rdl.Resource
+}
+
+func groupResources(resources []*rdl.Resource) []*entry {
 	groups := map[string][]*rdl.Resource{}
+	result := make([]*entry, 0)
 	for _, rez := range resources {
 		rtype := string(rez.Type)
 		if ent, ok := groups[rtype]; ok {
@@ -232,14 +240,18 @@ func groupResources(resources []*rdl.Resource) map[string][]*rdl.Resource {
 		} else {
 			ent = []*rdl.Resource{rez}
 			groups[rtype] = ent
+			result = append(result, &entry{name: rtype})
 		}
 	}
-	return groups
+	for _, entry := range result {
+		entry.resources = groups[entry.name]
+	}
+	return result
 }
 
 func formatType(out io.Writer, registry rdl.TypeRegistry, typeDef *rdl.Type) {
 	tName, _, tComment := rdl.TypeInfo(typeDef)
-	fmt.Fprintf(out, "\n### <a name=%q></a> %s\n", tName, tName)
+	fmt.Fprintf(out, "\n### <a name=%q>%s</a>\n", tName, tName)
 	if tComment != "" {
 		fmt.Fprintf(out, "%s", formatBlock(tComment, 0, 80, ""))
 	}
@@ -292,7 +304,7 @@ func annotate(registry rdl.TypeRegistry, typename rdl.TypeRef) string {
 	if t != nil {
 		tName, tType, _ := rdl.TypeInfo(t)
 		if tType != rdl.TypeRef(tName) {
-			return "[" + string(typename) + "](#" + strings.ToLower(string(typename)) + ")"
+			return "[" + string(typename) + "](#" + string(typename) + ")"
 		}
 	}
 	return string(typename)
@@ -333,7 +345,7 @@ func formatStructType(out io.Writer, registry rdl.TypeRegistry, types []*rdl.Typ
 				}
 				ff := ""
 				if t != topType {
-					ff = "[from [" + string(t.Name) + "](#" + strings.ToLower(string(t.Name)) + ")]"
+					ff = "[from [" + string(t.Name) + "](#" + string(t.Name) + ")]"
 				}
 				row := []string{string(fn), ft, fo, fc, ff}
 				rows = append(rows, row)
@@ -370,7 +382,7 @@ func formatArrayType(out io.Writer, registry rdl.TypeRegistry, name string, type
 		t := types[i].ArrayTypeDef
 		if t != nil {
 			if t != topType {
-				c = "[from [" + string(t.Name) + "](#" + strings.ToLower(string(t.Name)) + ")]"
+				c = "[from [" + string(t.Name) + "](#" + string(t.Name) + ")]"
 			}
 			if t.Size != nil {
 				size = &[]string{"minSize", fmt.Sprintf("%d", *t.Size), c}
@@ -410,7 +422,7 @@ func formatMapType(out io.Writer, registry rdl.TypeRegistry, name string, types 
 		if t != nil {
 			c := ""
 			if t != topType {
-				c = "[from [" + string(t.Name) + "](#" + strings.ToLower(string(t.Name)) + ")]"
+				c = "[from [" + string(t.Name) + "](#" + string(t.Name) + ")]"
 			}
 			if t.Size != nil {
 				size = &[]string{"minSize", fmt.Sprintf("%d", *t.Size), c}
@@ -453,7 +465,7 @@ func formatStringType(out io.Writer, registry rdl.TypeRegistry, name string, typ
 			t := types[i].StringTypeDef
 			c := ""
 			if t != topType {
-				c = "[from [" + string(t.Name) + "](#" + strings.ToLower(string(t.Name)) + ")]"
+				c = "[from [" + string(t.Name) + "](#" + string(t.Name) + ")]"
 			}
 			if t.Pattern != "" {
 				pattern = &[]string{"pattern", "`\"" + t.Pattern + "`\"", c}
@@ -500,7 +512,7 @@ func formatNumberType(out io.Writer, registry rdl.TypeRegistry, name string, typ
 			t := types[i].NumberTypeDef
 			c := ""
 			if t != topType {
-				c = "[from [" + string(t.Name) + "](#" + strings.ToLower(string(t.Name)) + ")]"
+				c = "[from [" + string(t.Name) + "](#" + string(t.Name) + ")]"
 			}
 			if t.Min != nil {
 				minVal = &[]string{"min", fmt.Sprintf("%v", *t.Min), c}
@@ -539,7 +551,7 @@ func formatBytesType(out io.Writer, registry rdl.TypeRegistry, name string, type
 			t := types[i].BytesTypeDef
 			c := ""
 			if t != topType {
-				c = "[from [" + string(t.Name) + "](#" + strings.ToLower(string(t.Name)) + ")]"
+				c = "[from [" + string(t.Name) + "](#" + string(t.Name) + ")]"
 			}
 			if t.MinSize != nil {
 				minSize = &[]string{"minSize", fmt.Sprintf("%d", *t.MinSize), c}
