@@ -11,6 +11,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/ardielle/ardielle-go/gen/gomodel"
 	"github.com/ardielle/ardielle-go/rdl"
 )
 
@@ -371,7 +372,7 @@ func (gen *clientGenerator) emitClient() error {
 	}
 	fieldFun := func(f rdl.StructFieldDef) string {
 		optional := f.Optional
-		fType := goType(gen.registry, f.Type, optional, f.Items, f.Keys, gen.precise, true)
+		fType := gomodel.GoType(gen.registry, f.Type, optional, f.Items, f.Keys, gen.precise, true)
 		fName := capitalize(string(f.Name))
 		option := ""
 		if optional {
@@ -406,11 +407,11 @@ func goMethodSignature(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) stri
 	returnSpec := "error"
 	//fixme: no content *with* output headers
 	if !noContent {
-		gtype := goType(reg, r.Type, false, "", "", precise, true)
+		gtype := gomodel.GoType(reg, r.Type, false, "", "", precise, true)
 		returnSpec = "(" + gtype
 		if r.Outputs != nil {
 			for _, o := range r.Outputs {
-				otype := goType(reg, o.Type, false, "", "", precise, true)
+				otype := gomodel.GoType(reg, o.Type, false, "", "", precise, true)
 				returnSpec += ", " + otype
 			}
 		}
@@ -502,7 +503,7 @@ func explodeURL(reg rdl.TypeRegistry, r *rdl.Resource) string {
 }
 
 func goMethodBody(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) string {
-	rtype := goType(reg, r.Type, false, "", "", precise, true)
+	rtype := gomodel.GoType(reg, r.Type, false, "", "", precise, true)
 	dataDef := fmt.Sprintf("var data %s", rtype)
 	errorReturn := "return data, err"
 	dataReturn := "return data, nil"
@@ -628,7 +629,7 @@ func goMethodBody(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) string {
 	//here, define the output headers
 	if r.Outputs != nil {
 		for _, o := range r.Outputs {
-			otype := goType(reg, o.Type, false, "", "", precise, true)
+			otype := gomodel.GoType(reg, o.Type, false, "", "", precise, true)
 			header := fmt.Sprintf("resp.Header.Get(rdl.FoldHttpHeaderName(%q))", o.Header)
 			if otype != "string" {
 				header = otype + "(" + header + ")"
