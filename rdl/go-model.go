@@ -22,5 +22,6 @@ func GenerateGoModel(opts *generateOptions) error {
 		LibRdl:         opts.librdl,
 		PrefixEnums:    opts.prefixEnums,
 		PreciseTypes:   opts.preciseTypes,
+		GenerateSchema: true,
 	})
 }
