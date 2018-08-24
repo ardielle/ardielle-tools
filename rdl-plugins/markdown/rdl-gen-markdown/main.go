@@ -226,7 +226,7 @@ func ExportToMarkdown(schema *rdl.Schema, outdir string) error {
 }
 
 type entry struct {
-	name string
+	name      string
 	resources []*rdl.Resource
 }
 
