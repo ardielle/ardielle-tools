@@ -6,12 +6,14 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/ardielle/ardielle-go/rdl"
 	"log"
 	"os"
 	"sort"
 	"strings"
 	"text/template"
+
+	"github.com/ardielle/ardielle-go/gen/javamodel"
+	"github.com/ardielle/ardielle-go/rdl"
 )
 
 type javaServerGenerator struct {
@@ -156,7 +158,7 @@ func javaServerMakeAsyncResultModel(banner string, schema *rdl.Schema, reg rdl.T
 			return "package " + s + ";\n"
 		},
 		"openBrace":  func() string { return "{" },
-		"name":       func() string { return uncapitalize(string(safeTypeVarName(r.Type))) },
+		"name":       func() string { return uncapitalize(string(javamodel.SafeTypeVarName(r.Type))) },
 		"cName":      func() string { return string(rType) },
 		"resultArgs": func() string { return gen.resultArgs(r) },
 		"resultSig":  func() string { return gen.resultSignature(r) },
@@ -190,7 +192,7 @@ func javaServerMakeResultModel(banner string, schema *rdl.Schema, reg rdl.TypeRe
 	if err != nil {
 		return err
 	}
-	rType := javaType(reg, rdl.TypeRef(r.Type), false, "", "")
+	rType := javamodel.JavaType(reg, rdl.TypeRef(r.Type), false, "", "")
 	gen := &javaServerGenerator{reg, schema, cName, out, nil, banner, ns, false, base}
 	funcMap := template.FuncMap{
 		"header": func() string { return javaGenerationHeader(gen.banner) },
@@ -202,7 +204,7 @@ func javaServerMakeResultModel(banner string, schema *rdl.Schema, reg rdl.TypeRe
 			return "package " + s + ";\n"
 		},
 		"openBrace":  func() string { return "{" },
-		"name":       func() string { return uncapitalize(string(safeTypeVarName(r.Type))) },
+		"name":       func() string { return uncapitalize(string(javamodel.SafeTypeVarName(r.Type))) },
 		"cName":      func() string { return string(rType) },
 		"resultArgs": func() string { return gen.resultArgs(r) },
 		"resultSig":  func() string { return gen.resultSignature(r) },
@@ -225,7 +227,7 @@ func javaServerMakeResultModel(banner string, schema *rdl.Schema, reg rdl.TypeRe
 }
 
 func (gen *javaServerGenerator) resultSignature(r *rdl.Resource) string {
-	vName := string(safeTypeVarName(r.Type)) + "Object"
+	vName := string(javamodel.SafeTypeVarName(r.Type)) + "Object"
 	s := javaType(gen.registry, r.Type, false, "", "") + " " + vName
 	for _, out := range r.Outputs {
 		s += ", " + javaType(gen.registry, out.Type, false, "", "") + " " + javaName(out.Name)
@@ -234,7 +236,7 @@ func (gen *javaServerGenerator) resultSignature(r *rdl.Resource) string {
 }
 
 func (gen *javaServerGenerator) resultArgs(r *rdl.Resource) string {
-	vName := string(safeTypeVarName(r.Type)) + "Object"
+	vName := string(javamodel.SafeTypeVarName(r.Type)) + "Object"
 	//void?
 	for _, out := range r.Outputs {
 		vName += ", " + javaName(out.Name)
@@ -600,6 +602,10 @@ public class {{cName}}Resources {
 }
 `
 
+func javaType(reg rdl.TypeRegistry, rdlType rdl.TypeRef, optional bool, items rdl.TypeRef, keys rdl.TypeRef) string {
+	return javamodel.JavaType(reg, rdlType, optional, items, keys)
+}
+
 func makeJavaTypeRef(reg rdl.TypeRegistry, t *rdl.Type) string {
 	switch t.Variant {
 	case rdl.TypeVariantAliasTypeDef:
@@ -938,7 +944,7 @@ func (gen *javaServerGenerator) serverMethodSignature(r *rdl.Resource) string {
 
 func javaMethodName(reg rdl.TypeRegistry, r *rdl.Resource) (string, []string) {
 	var params []string
-	bodyType := string(safeTypeVarName(r.Type))
+	bodyType := string(javamodel.SafeTypeVarName(r.Type))
 	for _, v := range r.Inputs {
 		if v.Context != "" { //ignore these legacy things
 			log.Println("Warning: v1 style context param ignored:", v.Name, v.Context)
@@ -946,7 +952,7 @@ func javaMethodName(reg rdl.TypeRegistry, r *rdl.Resource) (string, []string) {
 		}
 		k := v.Name
 		if v.QueryParam == "" && !v.PathParam && v.Header == "" {
-			bodyType = string(safeTypeVarName(v.Type))
+			bodyType = string(javamodel.SafeTypeVarName(v.Type))
 		}
 		//rest_core always uses the boxed type
 		optional := true

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/ardielle/ardielle-go/gen/gomodel"
 	"github.com/ardielle/ardielle-go/rdl"
 )
 
@@ -107,7 +108,7 @@ func GenerateGoDaemonMain(banner string, schema *rdl.Schema, outdir string, ns s
 	name := strings.ToLower(string(schema.Name))
 	fieldFun := func(f rdl.StructFieldDef) string {
 		optional := f.Optional
-		fType := goType(registry, f.Type, optional, f.Items, f.Keys, preciseTypes, true)
+		fType := gomodel.GoType(registry, f.Type, optional, f.Items, f.Keys, preciseTypes, true)
 		fName := capitalize(string(f.Name))
 		option := ""
 		if optional {
@@ -150,11 +151,11 @@ func goMethodSignatureImpl(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) 
 	returnSpec := "error"
 	//fixme: no content *with* output headers
 	if !noContent {
-		gtype := goType2(reg, r.Type, false, "", "", precise, true, "")
+		gtype := gomodel.GoType2(reg, r.Type, false, "", "", precise, true, "")
 		returnSpec = "(" + gtype
 		if r.Outputs != nil {
 			for _, o := range r.Outputs {
-				otype := goType2(reg, o.Type, false, "", "", precise, true, "")
+				otype := gomodel.GoType2(reg, o.Type, false, "", "", precise, true, "")
 				returnSpec += ", " + otype
 			}
 		}
@@ -233,7 +234,7 @@ func GenerateGoDaemonImpl(banner string, schema *rdl.Schema, outdir string, ns s
 	}
 	fieldFun := func(f rdl.StructFieldDef) string {
 		optional := f.Optional
-		fType := goType(registry, f.Type, optional, f.Items, f.Keys, preciseTypes, true)
+		fType := gomodel.GoType(registry, f.Type, optional, f.Items, f.Keys, preciseTypes, true)
 		fName := capitalize(string(f.Name))
 		option := ""
 		if optional {
@@ -330,7 +331,7 @@ func GenerateGoCLIMain(banner string, schema *rdl.Schema, outdir string, ns stri
 	name := strings.ToLower(string(schema.Name))
 	fieldFun := func(f rdl.StructFieldDef) string {
 		optional := f.Optional
-		fType := goType(registry, f.Type, optional, f.Items, f.Keys, preciseTypes, true)
+		fType := gomodel.GoType(registry, f.Type, optional, f.Items, f.Keys, preciseTypes, true)
 		fName := capitalize(string(f.Name))
 		option := ""
 		if optional {

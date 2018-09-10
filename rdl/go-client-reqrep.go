@@ -8,6 +8,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/ardielle/ardielle-go/gen/gomodel"
 	"github.com/ardielle/ardielle-go/rdl"
 )
 
@@ -547,7 +548,7 @@ func (rr *reqRepClientGenerator) convertInput(reg rdl.TypeRegistry, v *rdl.Resou
 		QueryParameter: v.QueryParam,
 		PathParameter:  v.PathParam,
 		Header:         v.Header,
-		TypeName:       goType2(reg, v.Type, v.Optional, "", "", precise, true, ""),
+		TypeName:       gomodel.GoType2(reg, v.Type, v.Optional, "", "", precise, true, ""),
 	}
 	valueExpr := fmt.Sprintf("req.%s", res.Name)
 	if reg.IsArrayTypeName(v.Type) && res.QueryParameter != "" {
@@ -576,13 +577,13 @@ func (rr *reqRepClientGenerator) convertOutput(reg rdl.TypeRegistry, v *rdl.Reso
 		Header:    v.Header,
 		Comment:   v.Comment,
 		ArrayType: reg.IsArrayTypeName(v.Type),
-		TypeName:  goType2(reg, v.Type, v.Optional, "", "", precise, true, ""),
+		TypeName:  gomodel.GoType2(reg, v.Type, v.Optional, "", "", precise, true, ""),
 	}
 }
 
 func (rr *reqRepClientGenerator) convertResource(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) *reqRepMethod {
 	var method reqRepMethod
-	bodyType := string(safeTypeVarName(r.Type))
+	bodyType := string(gomodel.SafeTypeVarName(r.Type))
 	for _, v := range r.Inputs {
 		if input := rr.convertInput(reg, v, precise); input != nil {
 			method.Inputs = append(method.Inputs, input)
@@ -595,7 +596,7 @@ func (rr *reqRepClientGenerator) convertResource(reg rdl.TypeRegistry, r *rdl.Re
 	if !noContent {
 		method.Outputs = append(method.Outputs, &reqRepVar{
 			Name:     "Body",
-			TypeName: goType(reg, r.Type, false, "", "", precise, true),
+			TypeName: gomodel.GoType(reg, r.Type, false, "", "", precise, true),
 		})
 	}
 	for _, v := range r.Outputs {

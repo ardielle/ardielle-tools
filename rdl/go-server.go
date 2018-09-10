@@ -11,6 +11,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/ardielle/ardielle-go/gen/gomodel"
 	"github.com/ardielle/ardielle-go/rdl"
 )
 
@@ -201,25 +202,25 @@ func makeTypeRef(reg rdl.TypeRegistry, t *rdl.Type, precise bool) string {
 	switch t.Variant {
 	case rdl.TypeVariantAliasTypeDef:
 		typedef := t.AliasTypeDef
-		return goType(reg, typedef.Type, false, "", "", precise, true)
+		return gomodel.GoType(reg, typedef.Type, false, "", "", precise, true)
 	case rdl.TypeVariantStringTypeDef:
 		typedef := t.StringTypeDef
-		return goType(reg, typedef.Type, false, "", "", precise, true)
+		return gomodel.GoType(reg, typedef.Type, false, "", "", precise, true)
 	case rdl.TypeVariantNumberTypeDef:
 		typedef := t.NumberTypeDef
-		return goType(reg, typedef.Type, false, "", "", precise, true)
+		return gomodel.GoType(reg, typedef.Type, false, "", "", precise, true)
 	case rdl.TypeVariantArrayTypeDef:
 		typedef := t.ArrayTypeDef
-		return goType(reg, typedef.Type, false, typedef.Items, "", precise, true)
+		return gomodel.GoType(reg, typedef.Type, false, typedef.Items, "", precise, true)
 	case rdl.TypeVariantMapTypeDef:
 		typedef := t.MapTypeDef
-		return goType(reg, typedef.Type, false, typedef.Items, typedef.Keys, precise, true)
+		return gomodel.GoType(reg, typedef.Type, false, typedef.Items, typedef.Keys, precise, true)
 	case rdl.TypeVariantStructTypeDef:
 		typedef := t.StructTypeDef
-		return goType(reg, typedef.Type, false, "", "", precise, true)
+		return gomodel.GoType(reg, typedef.Type, false, "", "", precise, true)
 	case rdl.TypeVariantEnumTypeDef:
 		typedef := t.EnumTypeDef
-		return goType(reg, typedef.Type, false, "", "", precise, true)
+		return gomodel.GoType(reg, typedef.Type, false, "", "", precise, true)
 	case rdl.TypeVariantUnionTypeDef:
 		return "interface{}" //! FIX
 	}
@@ -239,7 +240,7 @@ func (gen *serverGenerator) processTemplate(templateSource string) error {
 	}
 	fieldFun := func(f rdl.StructFieldDef) string {
 		optional := f.Optional
-		fType := goType(gen.registry, f.Type, optional, f.Items, f.Keys, gen.precise, true)
+		fType := gomodel.GoType(gen.registry, f.Type, optional, f.Items, f.Keys, gen.precise, true)
 		fName := capitalize(string(f.Name))
 		option := ""
 		if optional {
@@ -373,7 +374,7 @@ func goHandlerBody(reg rdl.TypeRegistry, name string, r *rdl.Resource, precise b
 			fargs = append(fargs, name)
 		} else {
 			bodyName = name
-			pgtype := goType(reg, in.Type, false, "", "", precise, true)
+			pgtype := gomodel.GoType(reg, in.Type, false, "", "", precise, true)
 			s += "\tvar " + bodyName + " " + pgtype + "\n"
 			s += "\toserr := json.NewDecoder(request.Body).Decode(&" + bodyName + ")\n"
 			s += "\tif oserr != nil {\n"
@@ -468,7 +469,7 @@ func goHandlerBody(reg rdl.TypeRegistry, name string, r *rdl.Resource, precise b
 
 func goParamInit(reg rdl.TypeRegistry, qname string, pname string, ptype rdl.TypeRef, pdefault interface{}, poptional bool, precise bool, prefixEnums bool) string {
 	s := ""
-	gtype := goType(reg, ptype, false, "", "", precise, true)
+	gtype := gomodel.GoType(reg, ptype, false, "", "", precise, true)
 	switch gtype {
 	default:
 		t := reg.FindType(ptype)
@@ -568,10 +569,10 @@ func goServerMethodSignature(reg rdl.TypeRegistry, r *rdl.Resource, precise bool
 	noContent := r.Expected == "NO_CONTENT" && r.Alternatives == nil
 	returnSpec := "error"
 	if !noContent {
-		gtype := goType(reg, r.Type, false, "", "", precise, true)
+		gtype := gomodel.GoType(reg, r.Type, false, "", "", precise, true)
 		outHeaders := ""
 		for _, v := range r.Outputs {
-			outHeaders += ", " + goType(reg, v.Type, false, "", "", precise, true)
+			outHeaders += ", " + gomodel.GoType(reg, v.Type, false, "", "", precise, true)
 		}
 		returnSpec = "(" + gtype + outHeaders + ", error)"
 	}
@@ -589,7 +590,7 @@ func goMethodName(reg rdl.TypeRegistry, r *rdl.Resource, precise bool) (string, 
 
 func goMethodName2(reg rdl.TypeRegistry, r *rdl.Resource, precise bool, packageName string) (string, []string) {
 	var params []string
-	bodyType := string(safeTypeVarName(r.Type))
+	bodyType := string(gomodel.SafeTypeVarName(r.Type))
 	for _, v := range r.Inputs {
 		if v.Context != "" { //legacy field, to be removed
 			continue
@@ -602,7 +603,7 @@ func goMethodName2(reg rdl.TypeRegistry, r *rdl.Resource, precise bool, packageN
 		if v.Optional {
 			optional = true
 		}
-		params = append(params, goName(string(k))+" "+goType2(reg, v.Type, optional, "", "", precise, true, packageName))
+		params = append(params, goName(string(k))+" "+gomodel.GoType2(reg, v.Type, optional, "", "", precise, true, packageName))
 	}
 	meth := string(r.Name)
 	if meth == "" {

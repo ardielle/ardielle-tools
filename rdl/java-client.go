@@ -5,10 +5,12 @@ package main
 
 import (
 	"bufio"
-	"github.com/ardielle/ardielle-go/rdl"
 	"log"
 	"strings"
 	"text/template"
+
+	"github.com/ardielle/ardielle-go/gen/javamodel"
+	"github.com/ardielle/ardielle-go/rdl"
 )
 
 type javaClientGenerator struct {
@@ -159,7 +161,7 @@ public class {{cName}}Client {
 
 func (gen *javaClientGenerator) clientMethodSignature(r *rdl.Resource) string {
 	reg := gen.registry
-	returnType := javaType(reg, r.Type, false, "", "")
+	returnType := javamodel.JavaType(reg, r.Type, false, "", "")
 	methName, params := javaMethodName(reg, r)
 	sparams := ""
 	if len(params) > 0 {
@@ -177,7 +179,7 @@ func (gen *javaClientGenerator) clientMethodSignature(r *rdl.Resource) string {
 
 func (gen *javaClientGenerator) clientMethodBody(r *rdl.Resource) string {
 	reg := gen.registry
-	returnType := javaType(reg, r.Type, false, "", "")
+	returnType := javamodel.JavaType(reg, r.Type, false, "", "")
 	path := r.Path
 	s := "WebTarget target = base.path(\"" + path + "\")"
 	entityName := ""
