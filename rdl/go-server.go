@@ -551,6 +551,56 @@ func goParamInit(reg rdl.TypeRegistry, qname string, pname string, ptype rdl.Typ
 					s += "\t" + pname + " := New" + gtype + "(" + pname + "Optional)\n"
 				}
 			}
+		case rdl.BaseTypeTimestamp:
+			stype := fmt.Sprint(bt)
+			errData := "&rdl.ResourceError{Code: 400, Message: \"Invalid " + stype + "\"}"
+			if pdefault == nil {
+				s += fmt.Sprintf("\tvar %s *%s\n", pname, gtype)
+				s += fmt.Sprintf("\t%sOptional := rdl.OptionalStringParam(request, %q)\n", pname, qname)
+				s += fmt.Sprintf("\tif %sOptional != \"\" {\n", pname)
+				s += "\t\tp" + pname + ", err := rdl." + stype + "Parse(" + pname + "Optional)\n"
+				s += "\tif err != nil {\n"
+				s += "\t\trdl.JSONResponse(writer, 400, " + errData + ")\n"
+				s += "\t\treturn\n"
+				s += "\t}\n"
+				s += "\t\t" + pname + " = &p" + pname + "\n"
+				s += "\t}\n"
+			} else {
+				s += fmt.Sprintf("\t%sOptional, _ := rdl.StringParam(request, %q, %v.String())\n", pname, qname, pdefault)
+				s += "\tp" + pname + " := rdl." + stype + "Parse(" + pname + "Optional)\n"
+				s += "\tif err != nil {\n"
+				s += "\t\trdl.JSONResponse(writer, 400, " + errData + ")\n"
+				s += "\t\treturn\n"
+				s += "\t}\n"
+				if poptional {
+					s += "\t" + pname + " := &p" + pname + "\n"
+				}
+			}
+		case rdl.BaseTypeUUID:
+			stype := fmt.Sprint(bt)
+			errData := "&rdl.ResourceError{Code: 400, Message: \"Invalid " + stype + "\"}"
+			if pdefault == nil {
+				s += fmt.Sprintf("\tvar %s *%s\n", pname, gtype)
+				s += fmt.Sprintf("\t%sOptional := rdl.OptionalStringParam(request, %q)\n", pname, qname)
+				s += fmt.Sprintf("\tif %sOptional != \"\" {\n", pname)
+				s += "\t\tp" + pname + " := rdl.Parse" + stype + "(" + pname + "Optional)\n"
+				s += "\tif p" + pname + " == nil {\n"
+				s += "\t\trdl.JSONResponse(writer, 400, " + errData + ")\n"
+				s += "\t\treturn\n"
+				s += "\t}\n"
+				s += "\t\t" + pname + " = &p" + pname + "\n"
+				s += "\t}\n"
+			} else {
+				s += fmt.Sprintf("\t%sOptional, _ := rdl.StringParam(request, %q, %v.String())\n", pname, qname, pdefault)
+				s += "\tp" + pname + " := rdl.Parse" + stype + "(" + pname + "Optional)\n"
+				s += "\tif p" + pname + " == nil {\n"
+				s += "\t\trdl.JSONResponse(writer, 400, " + errData + ")\n"
+				s += "\t\treturn\n"
+				s += "\t}\n"
+				if poptional {
+					s += "\t" + pname + " := &p" + pname + "\n"
+				}
+			}
 		default:
 			fmt.Println("fix me:", pname, "of type", gtype, "with base type", bt)
 			panic("fix me")
