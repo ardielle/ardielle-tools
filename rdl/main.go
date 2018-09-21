@@ -7,13 +7,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/ardielle/ardielle-go/rdl"
-	"github.com/jawher/mow.cli"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/ardielle/ardielle-go/gen/jsonschema"
+	"github.com/ardielle/ardielle-go/rdl"
+	"github.com/jawher/mow.cli"
 )
 
 // BuildDate is set when building to contain the build date
@@ -58,6 +60,7 @@ Generators (accepted arguments to the generate command):
   java-model         Generate the Java code for the types in the schema
   java-client        Generate the Java code for a client to the resources in the schema
   java-server        Generate the Java code for a server implementation  of the resources in the schema
+  json-schema        Generate the JSON Schema for the RDL schema. Resources are ignored, just types get generated.
   swagger            Generate the swagger resource for the schema. If the outfile is an endpoint, serve it via HTTP.
   legacy             Generate the legacy (RDL v1) JSON representation of the schema
 
@@ -287,10 +290,29 @@ func generate(flavor string, srcFile string, opts *generateOptions) {
 		err = GenerateJavaServer(opts.banner, opts.schema, opts.dirName, opts.ns, opts.base, opts.externalOptions)
 	case "java-client":
 		err = GenerateJavaClient(opts.banner, opts.schema, opts.dirName, opts.ns, opts.base, opts.externalOptions)
+	case "json-schema":
+		err = GenerateJsonSchema(opts)
 	default:
 		err = generateExternally(flavor, opts.dirName, opts.schema, srcFile, opts.base, opts.externalOptions)
 	}
 	exitOnError(err)
+}
+
+func GenerateJsonSchema(opts *generateOptions) error {
+	schema := opts.schema
+	outdir := opts.dirName
+	js, err := jsonschema.Generate(schema)
+	if err != nil {
+		return err
+	}
+	out, file, _, err := outputWriter(outdir, string(schema.Name)+"_schema", ".json")
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "%s", js.String())
+	out.Flush()
+	file.Close()
+	return nil
 }
 
 func exitOnError(err error) {
