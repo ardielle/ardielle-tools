@@ -38,11 +38,16 @@ func main() {
 		fmt.Println("***", err.Error())
 		os.Exit(1)
 	}
-	schema := swaggerToSchema(name, doc)
-	fmt.Println(pretty(schema))
+	schema, err := swaggerToSchema(name, doc)
+	if err != nil {
+		fmt.Println("***", err)
+	}
+	if schema != nil {
+		fmt.Println(pretty(schema))
+	}
 }
 
-func swaggerToSchema(name string, doc *swagger.Doc) *rdl.Schema {
+func swaggerToSchema(name string, doc *swagger.Doc) (*rdl.Schema, error) {
 	s := doc.Info.Title
 	if strings.HasPrefix(s, "The ") && strings.HasSuffix(s, " API") {
 		name = s[4 : len(s)-4]
@@ -52,8 +57,6 @@ func swaggerToSchema(name string, doc *swagger.Doc) *rdl.Schema {
 		n, err := strconv.Atoi(doc.Info.Version)
 		if err == nil {
 			sb.Version(int32(n))
-		} else {
-			fmt.Fprintf(os.Stderr, "WARNING: version is not an integer (%v), ignoring it: %q\n", err, doc.Info.Version)
 		}
 	}
 	if doc.BasePath != "" {
@@ -65,7 +68,7 @@ func swaggerToSchema(name string, doc *swagger.Doc) *rdl.Schema {
 	for k, v := range doc.Paths {
 		importSwaggerResources(sb, k, v)
 	}
-	return sb.Build()
+	return sb.BuildParanoid()
 }
 
 func importSwaggerResources(sb *rdl.SchemaBuilder, path string, handler *swagger.PathItem) {
@@ -157,20 +160,23 @@ func importSwaggerResource(sb *rdl.SchemaBuilder, path string, method string, op
 	for _, param := range op.Parameters {
 		pparam := false
 		qparam := ""
+		header := ""
 		switch param.In {
 		case "path":
 			pparam = true
 		case "query":
 			qparam = param.Name
 		case "body":
+		case "header":
+			header = param.Name //this is an HTTP Header (a fairly general string), not an Identifier
 		default:
-			fmt.Println("FIXME param source:", param.In)
+			//not supported: formHeader
 		}
-		header := ""
+		identifier := strings.Replace(param.Name, "-", "_", -1)
 		optional := false
 		var defval interface{}
 		ptype := importTypeName(param.Schema, param.Type)
-		rb.Input(param.Name, ptype, pparam, qparam, header, optional, defval, param.Description)
+		rb.Input(identifier, ptype, pparam, qparam, header, optional, defval, param.Description)
 	}
 	r := rb.Build()
 	if len(alternatives) > 0 {
@@ -255,7 +261,6 @@ func importSwaggerType(sb *rdl.SchemaBuilder, name string, def swagger.Type, fro
 		return
 	}
 	name = camelize(name)
-	//fmt.Println("import this type:", name)
 	requiredFields := make(map[string]bool)
 	if def["required"] != nil {
 		required := def["required"].([]interface{})
@@ -505,6 +510,9 @@ func normalizeTypeName(fdef map[string]interface{}) (string, string) {
 	case "integer":
 		fbase = "Int32"
 		ftype = fbase
+	case "number":
+		fbase = "Float32"
+		ftype = fbase
 	case "boolean":
 		fbase = "Bool"
 		ftype = fbase
@@ -514,9 +522,6 @@ func normalizeTypeName(fdef map[string]interface{}) (string, string) {
 	case "array":
 		fbase = "Array"
 		ftype = fbase
-	default:
-		fbase = "Struct" //!
-		ftype = fdef["type"].(string)
 	}
 	ref := getString(fdef, "$ref")
 	if strings.HasPrefix(ref, "#/definitions/") {
