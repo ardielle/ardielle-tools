@@ -13,7 +13,7 @@ The binaries will be installed into $GOPATH/bin, and the source into $GOPATH/src
 ## Usage
 
 The [rdl](rdl) contains the main `rdl` command line tool and core code generators that
-the tool itself depends on. Other generators are in the [rdl-gen](rdl-gen) dcirectory.
+the tool itself depends on. Other generators are in the [rdl-gen](rdl-gen) directory.
 
 The `rdl` tool has the following usage:
 	
