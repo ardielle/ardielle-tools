@@ -360,6 +360,7 @@ import javax.servlet.http.HttpServletResponse;
 public interface {{cName}}Handler {{openBrace}} {{range .Resources}}
     {{methodSig .}};{{end}}
     public ResourceContext newResourceContext(HttpServletRequest request, HttpServletResponse response);
+	void recordMetrics(ResourceContext ctx, String httpMethod, int httpStatus, String apiName);
 }
 `
 const javaServerResultTemplate = `{{header}}
@@ -713,8 +714,10 @@ func (gen *javaServerGenerator) handlerBody(r *rdl.Resource) string {
 	if !resultWrapper {
 		returnType = javaType(gen.registry, r.Type, false, "", "")
 	}
-	s := "        try {\n"
-	s += "            ResourceContext context = this.delegate.newResourceContext(this.request, this.response);\n"
+	s := "        int code = ResourceException.OK;\n"
+	s += "        ResourceContext context = null;\n"
+	s += "        try {\n"
+	s += "            context = this.delegate.newResourceContext(this.request, this.response);\n"
 	var fargs []string
 	bodyName := ""
 	if r.Auth != nil {
@@ -793,7 +796,7 @@ func (gen *javaServerGenerator) handlerBody(r *rdl.Resource) string {
 		}
 	}
 	s += "        } catch (ResourceException e) {\n"
-	s += "            int code = e.getCode();\n"
+	s += "            code = e.getCode();\n"
 	s += "            switch (code) {\n"
 	if len(r.Alternatives) > 0 {
 		for _, alt := range r.Alternatives {
@@ -813,7 +816,10 @@ func (gen *javaServerGenerator) handlerBody(r *rdl.Resource) string {
 	s += "                System.err.println(\"*** Warning: undeclared exception (\" + code + \") for resource " + methName + "\");\n"
 	s += "                throw typedException(code, e, ResourceError.class);\n" //? really
 	s += "            }\n"
+	s += "        } finally {\n"
+	s += "            this.delegate.recordMetrics(context, \"" + r.Method + "\", code, \"" + methName + "\");\n"
 	s += "        }\n"
+
 	return s
 }
 
