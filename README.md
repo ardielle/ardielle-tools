@@ -6,9 +6,9 @@ RDL tools
 
 To install from source, you need go v1.4.2 or greater installed, and do this:
 
-    go get github.com/ardielle/ardielle-tools/...
+    go install github.com/ardielle/ardielle-tools/...@latest
 
-The binaries will be installed into $GOPATH/bin, and the source into $GOPATH/src
+The binaries will be installed into $GOPATH/bin, and the source into $GOPATH/src.
 
 ## Usage
 
